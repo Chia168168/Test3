@@ -1,49 +1,31 @@
 <!DOCTYPE html>
 <html lang="zh">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
 <title>Teng Image Tools v1.5</title>
 <style>
-body { font-family: Arial, sans-serif; margin: 20px; background:#0b1020; color:#e7ecf3; }
-h1, h2 { text-align: center; }
-.tabs { display: flex; justify-content: center; margin-bottom: 20px; gap:10px; flex-wrap:wrap; }
-.tab { padding: 10px 20px; cursor: pointer; border-radius:6px; background:#002366; color:#fff; font-weight:bold; }
-.tab.active { background:#0044aa; }
-.tab-content { display: none; }
-.tab-content.active { display: block; }
-textarea { width: 100%; height: 150px; }
-img.preview { max-width: 100%; max-height: 200px; display: block; margin: 10px auto; }
-button { margin: 10px 0; padding:10px; font-size:16px; cursor:pointer; }
-select, input[type="number"], input[type="text"], input[type="range"] {
-  padding:10px; border-radius:6px; border:1px solid #27314a; background:#141a2e; color:#e7ecf3; font-size:16px; width:100%;
-  box-sizing:border-box;
-}
+body{font-family:Arial;margin:20px;background:#0b1020;color:#e7ecf3}
+h1,h2{text-align:center}
+.tabs{display:flex;justify-content:center;margin-bottom:20px;gap:10px;flex-wrap:wrap}
+.tab{padding:10px 20px;cursor:pointer;border-radius:6px;background:#002366;color:#fff;font-weight:bold}
+.tab.active{background:#0044aa}
+.tab-content{display:none}
+.tab-content.active{display:block}
 .card{background:#141a2e;border:1px solid #27314a;border-radius:12px;padding:16px;margin:12px auto;max-width:100%}
-.log{font-family:monospace;background:#0a0f22;border:1px solid #27314a;border-radius:8px;padding:10px;height:160px;overflow:auto}
-.thumbs{display:grid;grid-template-columns:repeat(4,1fr); gap:12px;}
+.file-btn{display:inline-block;padding:10px 20px;background:#002366;color:#fff;border-radius:6px;cursor:pointer;margin:5px 0;text-align:center}
+.file-btn input[type=file]{display:none}
+.thumbs{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
 .thumb{background:#0c1226;border:1px solid #27314a;border-radius:12px;overflow:hidden}
 .thumb img{width:100%;display:block}
 .thumb .meta{padding:8px;font-size:12px;color:#9aa4b2;text-align:center}
 .drop{border:2px dashed #2b3b66;border-radius:10px;padding:18px;text-align:center;color:#c7d2fe;background:#0d1330;margin-bottom:10px}
-.drop.dragover{outline:2px solid #5eead4}
+.log{font-family:monospace;background:#0a0f22;border:1px solid #27314a;border-radius:8px;padding:10px;height:160px;overflow:auto}
 label{display:block;margin-top:10px;font-size:14px;color:#9aa4b2}
-.file-btn { display:inline-block; padding:10px 20px; background:#002366; color:#fff; border-radius:6px; cursor:pointer; margin:5px 0; text-align:center; }
-.file-btn input[type=file]{ display:none; }
-
-.options-section { margin-top:15px; }
-.option-group { margin-top:10px; }
-
-.format-buttons { display:flex; gap:10px; margin-top:5px; }
-.format-btn { padding:8px 16px; border:none; border-radius:6px; cursor:pointer; background:#007bff; color:white; font-weight:bold; }
-.format-btn.active { background:#0056b3; }
-
-@media(max-width:600px){
-  .thumbs{grid-template-columns:repeat(2,1fr);}
-  body { margin:5px; }
-  .card { margin:5px; padding:12px; }
-  button, select, input, textarea { width:100% !important; box-sizing:border-box; font-size:16px; }
-}
+.range-inline{display:flex;align-items:center;gap:8px}
+.range-inline input[type=range]{flex:1}
+.small-badge{font-size:13px;color:#c7d2fe;background:#0d1330;padding:4px 8px;border-radius:6px;border:1px solid #27314a}
+@media(max-width:600px){.thumbs{grid-template-columns:repeat(2,1fr)}body{margin:5px}.card{margin:5px;padding:12px}button,select,input,textarea{width:100%!important;box-sizing:border-box;font-size:16px}}
 </style>
 <script src="https://cdn.jsdelivr.net/npm/pica@8.0.0/dist/pica.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/heic2any@0.0.4/dist/heic2any.min.js"></script>
@@ -61,7 +43,9 @@ label{display:block;margin-top:10px;font-size:14px;color:#9aa4b2}
 <div id="resizer" class="tab-content active">
   <section class="card">
     <h2>圖片尺寸/格式調整器</h2>
+
     <div class="drop" id="drop">拖曳圖片或資料夾到這裡</div>
+
     <label class="file-btn">選擇檔案
       <input id="fileFiles" type="file" accept="image/*,.heic,.heif" multiple>
     </label>
@@ -73,23 +57,15 @@ label{display:block;margin-top:10px;font-size:14px;color:#9aa4b2}
     <button id="process">開始處理</button>
     <button id="clear">清空</button>
 
-    <div class="options-section">
-      <h3>輸出選項</h3>
-      <!-- 格式 -->
-      <div class="option-group">
-        <label>輸出格式：</label>
-        <div class="format-buttons">
-          <button type="button" class="format-btn active" data-format="jpg">JPG</button>
-          <button type="button" class="format-btn" data-format="png">PNG</button>
-          <button type="button" class="format-btn" data-format="webp">WebP</button>
-        </div>
-      </div>
-      <!-- JPG 品質 -->
-      <div class="option-group" id="jpgQualityContainer">
-        <label for="jpgQuality">JPG 品質：</label>
-        <input type="number" id="jpgQuality" min="1" max="100" value="90"> %
-      </div>
-    </div>
+    <h3>輸出選項</h3>
+    <label>輸出格式
+      <select id="format">
+        <option value="keep">維持原格式</option>
+        <option value="image/jpeg" selected>JPEG</option>
+        <option value="image/png">PNG</option>
+        <option value="image/webp">WebP</option>
+      </select>
+    </label>
 
     <label>長邊
       <select id="longSide">
@@ -99,8 +75,9 @@ label{display:block;margin-top:10px;font-size:14px;color:#9aa4b2}
         <option value="1280">1280</option>
         <option value="-1">自訂</option>
       </select>
-      <input type="number" id="longSideCustom" placeholder="自訂長邊" style="display:none; margin-top:5px;">
+      <input id="longSideCustom" type="number" placeholder="自訂長邊" style="display:none;margin-top:5px;">
     </label>
+
     <label>短邊
       <select id="shortSide">
         <option value="0" selected>原尺寸</option>
@@ -109,15 +86,32 @@ label{display:block;margin-top:10px;font-size:14px;color:#9aa4b2}
         <option value="1280">1280</option>
         <option value="-1">自訂</option>
       </select>
-      <input type="number" id="shortSideCustom" placeholder="自訂短邊" style="display:none; margin-top:5px;">
+      <input id="shortSideCustom" type="number" placeholder="自訂短邊" style="display:none;margin-top:5px;">
     </label>
 
     <label><input id="lock" type="checkbox" checked> 維持長寬比</label>
-    <label>縮放比例 (%) <input id="scale" type="range" min="10" max="200" value="100"><span id="scaleLabel">100%</span></label>
-    <div id="note" style="color:#ff7777; margin-top:5px;">注意：已設定長/短邊，縮放比例將忽略</div>
+
+    <!-- 縮放比例 (range) -->
+    <label>縮放比例 (%)</label>
+    <div class="range-inline">
+      <input id="scale" type="range" min="10" max="200" value="100">
+      <div class="small-badge" id="scaleLabel">100%</div>
+    </div>
+
+    <!-- JPG 品質：僅在格式為 JPEG 顯示 (range style 與縮放比一樣) -->
+    <div id="jpegQualityWrap" style="margin-top:10px; display:block;">
+      <label>JPG 品質 (%)</label>
+      <div class="range-inline">
+        <input id="jpegQuality" type="range" min="1" max="100" value="90">
+        <div class="small-badge" id="jpegQualityLabel">90%</div>
+      </div>
+    </div>
+
+    <div id="note" style="color:#ff7777;margin-top:5px;">注意：已設定長/短邊，縮放比例將忽略</div>
 
     <h3>預覽</h3>
     <div id="thumbs" class="thumbs"></div>
+
     <h3>日誌</h3>
     <div id="log" class="log"></div>
   </section>
@@ -127,20 +121,19 @@ label{display:block;margin-top:10px;font-size:14px;color:#9aa4b2}
   <section class="card">
     <h2>圖片 → Base64</h2>
     <label class="file-btn">選擇檔案
-      <input type="file" id="imgToBase64" accept="image/*">
+      <input id="imgToBase64" type="file" accept="image/*">
     </label>
     <button id="downloadBase64Btn">下載 Base64 txt</button>
     <textarea id="base64Output" placeholder="這裡會顯示 Base64 編碼"></textarea>
     <img id="previewBase64Img" class="preview">
-
     <hr>
     <h2>Base64 → 圖片</h2>
     <textarea id="base64Input" placeholder="貼上 Base64 字串（或直接選檔）"></textarea>
     <label class="file-btn">選擇檔案
-      <input type="file" id="base64File" accept=".txt">
+      <input id="base64File" type="file" accept=".txt">
     </label>
-    <div id="progressContainer" style="width:100%; background:#ddd; height:10px; display:none; margin:10px 0;">
-      <div id="progressBar" style="width:0%; height:100%; background:#4caf50; text-align:center; color:white; font-size:12px;">0%</div>
+    <div id="progressContainer" style="width:100%;background:#ddd;height:10px;display:none;margin:10px 0;">
+      <div id="progressBar" style="width:0%;height:100%;background:#4caf50;text-align:center;color:white;font-size:12px">0%</div>
     </div>
     <a id="downloadRestored" style="display:none" download="restored.png">下載圖片</a>
     <img id="restoredImg" class="preview">
@@ -150,164 +143,307 @@ label{display:block;margin-top:10px;font-size:14px;color:#9aa4b2}
 <script>
 const picaInstance = window.pica({features:['js','wasm','cib']});
 
-// 分頁切換
-document.querySelectorAll(".tab").forEach(tab=>{
-  tab.addEventListener("click",()=>{
-    document.querySelectorAll(".tab").forEach(t=>t.classList.remove("active"));
-    document.querySelectorAll(".tab-content").forEach(c=>c.classList.remove("active"));
-    tab.classList.add("active");
-    document.getElementById(tab.dataset.tab).classList.add("active");
-  });
-});
+// --- DOM ---
+const thumbs = document.getElementById('thumbs');
+const logEl = document.getElementById('log');
+const fileFiles = document.getElementById('fileFiles');
+const fileFolder = document.getElementById('fileFolder');
+const drop = document.getElementById('drop');
 
-// 日誌
-const logEl = document.getElementById("log");
-function log(msg){ 
-  const time=new Date().toLocaleTimeString(); 
-  logEl.innerHTML+=`[${time}] ${msg}<br>`; 
-  logEl.scrollTop=logEl.scrollHeight;
-}
+const longSideSel = document.getElementById('longSide');
+const shortSideSel = document.getElementById('shortSide');
+const longSideCustom = document.getElementById('longSideCustom');
+const shortSideCustom = document.getElementById('shortSideCustom');
+const lockEl = document.getElementById('lock');
+const scaleEl = document.getElementById('scale');
+const scaleLabel = document.getElementById('scaleLabel');
+const formatEl = document.getElementById('format');
 
-// 縮圖資料
-const thumbs = document.getElementById("thumbs");
+const jpegWrap = document.getElementById('jpegQualityWrap');
+const jpegQualityEl = document.getElementById('jpegQuality');
+const jpegQualityLabel = document.getElementById('jpegQualityLabel');
+
+function log(msg){ const time=new Date().toLocaleTimeString(); logEl.innerHTML += `[${time}] ${msg}<br>`; logEl.scrollTop=logEl.scrollHeight; }
+
+// data
 const queue = [];
 const thumbList = [];
 
-// 顯示/隱藏自訂欄
-['longSide','shortSide'].forEach(id=>{
-  document.getElementById(id).addEventListener('change', e=>{
-    const custom = document.getElementById(id+'Custom');
-    custom.style.display = e.target.value==-1 ? 'block':'none';
-    updateThumbs();
-  });
-});
-['longSideCustom','shortSideCustom'].forEach(id=>document.getElementById(id).addEventListener('input',updateThumbs));
+// helper: read settings
+function readSettings(){
+  const longSel = Number(longSideSel.value);
+  const shortSel = Number(shortSideSel.value);
+  const longCustomVal = Number(longSideCustom.value);
+  const shortCustomVal = Number(shortSideCustom.value);
+  const scale = Number(scaleEl.value)/100;
+  const lock = lockEl.checked;
+  const outFormat = formatEl.value;
+  const jpegQuality = Number(jpegQualityEl.value)/100; // 0..1
+  return { longSel, shortSel, longCustomVal, shortCustomVal, scale, lock, outFormat, jpegQuality };
+}
 
-// 縮放比例顯示
-document.getElementById('scale').addEventListener('input', e=>{
-  document.getElementById('scaleLabel').textContent = e.target.value + '%';
-  updateThumbs();
-});
-document.getElementById('lock').addEventListener('change', updateThumbs);
+// show/hide custom inputs
+function toggleCustomInputs(){
+  longSideCustom.style.display = Number(longSideSel.value) === -1 ? 'block' : 'none';
+  shortSideCustom.style.display = Number(shortSideSel.value) === -1 ? 'block' : 'none';
+}
 
-// 輸出格式切換
-document.querySelectorAll(".format-btn").forEach(btn => {
-  btn.addEventListener("click", () => {
-    document.querySelectorAll(".format-btn").forEach(b => b.classList.remove("active"));
-    btn.classList.add("active");
-    const format = btn.getAttribute("data-format");
-    document.getElementById("jpgQualityContainer").style.display = (format === "jpg") ? "block" : "none";
-  });
-});
-document.getElementById("jpgQualityContainer").style.display = "block";
+// show/hide jpeg quality control depending on format
+function toggleJpegQualityUI(){
+  const fmt = formatEl.value;
+  if(fmt === 'image/jpeg'){
+    jpegWrap.style.display = 'block';
+  } else {
+    jpegWrap.style.display = 'none';
+  }
+}
 
-// 拖放/選檔
-const drop=document.getElementById('drop');
-drop.addEventListener('dragover', e=>{e.preventDefault(); drop.classList.add('dragover');});
-drop.addEventListener('dragleave', e=>{e.preventDefault(); drop.classList.remove('dragover');});
-drop.addEventListener('drop', e=>{e.preventDefault(); drop.classList.remove('dragover'); handleFiles([...e.dataTransfer.files]);});
-document.getElementById('fileFiles').addEventListener('change', e=>handleFiles([...e.target.files]));
-document.getElementById('fileFolder').addEventListener('change', e=>handleFiles([...e.target.files]));
+// calculate target size robustly
+function calcTargetSize(origW, origH){
+  const s = readSettings();
+  let targetLong = null, targetShort = null;
+  if (s.longSel > 0) targetLong = s.longSel;
+  else if (s.longSel === -1 && s.longCustomVal > 0) targetLong = s.longCustomVal;
 
+  if (s.shortSel > 0) targetShort = s.shortSel;
+  else if (s.shortSel === -1 && s.shortCustomVal > 0) targetShort = s.shortCustomVal;
+
+  const isLandscape = origW >= origH;
+  const origLong = isLandscape ? origW : origH;
+  const origShort = isLandscape ? origH : origW;
+  const aspect = origLong / origShort;
+
+  // If neither specified -> use scale
+  if (!targetLong && !targetShort){
+    const w = Math.max(1, Math.round(origW * s.scale));
+    const h = Math.max(1, Math.round(origH * s.scale));
+    return { w, h };
+  }
+
+  // If lock (preserve aspect)
+  if (s.lock){
+    if (targetLong && !targetShort){
+      const newLong = targetLong;
+      const newShort = Math.max(1, Math.round(newLong / aspect));
+      return isLandscape ? { w: newLong, h: newShort } : { w: newShort, h: newLong };
+    }
+    if (!targetLong && targetShort){
+      const newShort = targetShort;
+      const newLong = Math.max(1, Math.round(newShort * aspect));
+      return isLandscape ? { w: newLong, h: newShort } : { w: newShort, h: newLong };
+    }
+    if (targetLong && targetShort){
+      const shortFromLong = Math.max(1, Math.round(targetLong / aspect));
+      if (shortFromLong <= targetShort){
+        return isLandscape ? { w: targetLong, h: shortFromLong } : { w: shortFromLong, h: targetLong };
+      } else {
+        const longFromShort = Math.max(1, Math.round(targetShort * aspect));
+        return isLandscape ? { w: longFromShort, h: targetShort } : { w: targetShort, h: longFromShort };
+      }
+    }
+  } else {
+    const useLong = targetLong || origLong;
+    const useShort = targetShort || origShort;
+    return isLandscape ? { w: useLong, h: useShort } : { w: useShort, h: useLong };
+  }
+
+  return { w: origW, h: origH };
+}
+
+// add preview thumbnail
+function addThumbEntry(thumb){
+  const div = document.createElement('div');
+  div.className = 'thumb';
+  const imgEl = new Image();
+  imgEl.src = thumb.url;
+  div.appendChild(imgEl);
+  const meta = document.createElement('div');
+  meta.className = 'meta';
+  meta.textContent = `${thumb.origW}×${thumb.origH} → ${thumb.origW}×${thumb.origH}`;
+  div.appendChild(meta);
+  thumbs.appendChild(div);
+
+  thumb.div = div;
+  thumb.imgEl = imgEl;
+  thumb.meta = meta;
+  thumbList.push(thumb);
+}
+
+// update single thumb display
+function updateThumbDisplay(thumb){
+  const { w, h } = calcTargetSize(thumb.origW, thumb.origH);
+  thumb.meta.textContent = `${thumb.origW}×${thumb.origH} → ${w}×${h}`;
+  thumb.currentW = w;
+  thumb.currentH = h;
+}
+
+// update all thumbs
+function updateAllThumbs(){
+  toggleCustomInputs();
+  toggleJpegQualityUI();
+  scaleLabel.textContent = scaleEl.value + '%';
+  jpegQualityLabel.textContent = jpegQualityEl.value + '%';
+
+  const s = readSettings();
+  if ( (s.longSel>0 || s.longSel===-1 || s.shortSel>0 || s.shortSel===-1) ){
+    document.getElementById('note').style.display = 'block';
+  } else {
+    document.getElementById('note').style.display = 'none';
+  }
+
+  thumbList.forEach(t => updateThumbDisplay(t));
+}
+
+// handle files
 async function handleFiles(list){
-  for(const file of list){
+  for (const file of list){
     const url = URL.createObjectURL(file);
     const img = new Image();
-    img.onload = ()=>{
-      const thumb = {file, url, origW: img.naturalWidth, origH: img.naturalHeight, w: img.naturalWidth, h: img.naturalHeight};
+    img.onload = () => {
+      const thumb = { file, url, origW: img.naturalWidth, origH: img.naturalHeight };
       queue.push(thumb);
-      addThumb(thumb);
+      addThumbEntry(thumb);
+      updateThumbDisplay(thumb); // immediately apply current settings
     };
     img.src = url;
   }
   log(`加入 ${list.length} 個檔案`);
 }
 
-// 新增縮圖
-function addThumb(thumb){
-  const div = document.createElement('div'); div.className='thumb';
-  const imgEl = new Image(); imgEl.src = thumb.url; div.appendChild(imgEl);
-  const meta = document.createElement('div'); meta.className='meta';
-  meta.textContent = `${thumb.origW}×${thumb.origH} → ${thumb.w}×${thumb.h}`;
-  div.appendChild(meta);
-  thumb.div = div; thumb.meta = meta; thumb.imgEl = imgEl;
-  thumbs.appendChild(div);
-  thumbList.push(thumb);
-}
+// drag & drop
+drop.addEventListener('dragover', e=>{ e.preventDefault(); drop.classList.add('dragover'); });
+drop.addEventListener('dragleave', e=>{ e.preventDefault(); drop.classList.remove('dragover'); });
+drop.addEventListener('drop', e=>{ e.preventDefault(); drop.classList.remove('dragover'); handleFiles([...e.dataTransfer.files]); });
 
-// 計算目標尺寸
-function calcTargetSize(origW,origH){
-  let w=origW,h=origH;
-  const longSel=Number(document.getElementById('longSide').value);
-  const shortSel=Number(document.getElementById('shortSide').value);
-  const longCustom=Number(document.getElementById('longSideCustom').value);
-  const shortCustom=Number(document.getElementById('shortSideCustom').value);
-  const scale=Number(document.getElementById('scale').value)/100;
-  const lock=document.getElementById('lock').checked;
+// file selectors
+fileFiles.addEventListener('change', e=> handleFiles([...e.target.files]));
+fileFolder.addEventListener('change', e=> handleFiles([...e.target.files]));
 
-  if(longSel>0 || longSel==-1 || shortSel>0 || shortSel==-1){
-    let targetLong = longSel>0 ? longSel : (longSel==-1 && longCustom>0 ? longCustom: origW);
-    let targetShort = shortSel>0 ? shortSel : (shortSel==-1 && shortCustom>0 ? shortCustom: origH);
-    if(origW>=origH){ w=targetLong; h=targetShort; if(lock) h=Math.round(origH*(w/origW)); }
-    else{ h=targetLong; w=targetShort; if(lock) w=Math.round(origW*(h/origH)); }
-  } else{
-    w = Math.round(origW*scale); h=Math.round(origH*scale);
-  }
-  return {w,h};
-}
+// wire inputs to updateAllThumbs
+['longSide','shortSide','longSideCustom','shortSideCustom','scale','lock','format','jpegQuality'].forEach(id=>{
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.addEventListener('input', updateAllThumbs);
+  el.addEventListener('change', updateAllThumbs);
+});
 
-// 更新所有縮圖尺寸顯示
-function updateThumbs(){
-  thumbList.forEach(t=>{
-    const {w,h}=calcTargetSize(t.origW,t.origH);
-    t.w=w; t.h=h;
-    t.meta.textContent = `${t.origW}×${t.origH} → ${t.w}×${t.h}`;
-  });
-}
-
-// 處理圖片
-async function processFile(t){
-  try{
-    let f=t.file;
-    if(f.name.toLowerCase().endsWith(".heic")||f.name.toLowerCase().endsWith(".heif")){
-      const blob = await heic2any({blob:f,toType:"image/png"});
-      f = new File([blob],f.name.replace(/\.(heic|heif)$/i,'.png'),{type:"image/png"});
+// processing single file (pica)
+async function processFile(thumb){
+  try {
+    let f = thumb.file;
+    if (f.name.toLowerCase().endsWith('.heic') || f.name.toLowerCase().endsWith('.heif')){
+      const blob = await heic2any({ blob: f, toType: 'image/png' });
+      f = new File([blob], f.name.replace(/\.(heic|heif)$/i, '.png'), { type: 'image/png' });
     }
     const img = await new Promise(res=>{
-      const i=new Image(); i.onload=()=>res(i); i.src=URL.createObjectURL(f);
+      const i = new Image(); i.onload = ()=>res(i); i.src = URL.createObjectURL(f);
     });
-    const {w,h} = calcTargetSize(img.naturalWidth,img.naturalHeight);
-    const canvas = document.createElement('canvas'); canvas.width=w; canvas.height=h;
-    await picaInstance.resize(img,canvas,{quality:3,alpha:true});
+    const { w, h } = calcTargetSize(img.naturalWidth, img.naturalHeight);
+    const canvas = document.createElement('canvas'); canvas.width = w; canvas.height = h;
+    await picaInstance.resize(img, canvas, { quality: 3, alpha: true });
+    const fmt = formatEl.value;
+    const mime = fmt !== 'keep' ? fmt : (f.type || 'image/jpeg');
 
-    // 輸出格式與品質
-    const formatBtn = document.querySelector(".format-btn.active");
-    let mime = 'image/jpeg';
-    if(formatBtn) mime = (formatBtn.getAttribute("data-format")==='jpg') ? 'image/jpeg' : 'image/'+formatBtn.getAttribute("data-format");
-    let quality = (mime==='image/jpeg' || mime==='image/webp') ? Number(document.getElementById('jpgQuality').value)/100 : undefined;
+    // quality: for jpeg & webp use jpegQualityEl (0..1); for others undefined
+    let quality;
+    if (mime.includes('jpeg') || mime.includes('webp')) {
+      quality = Number(jpegQualityEl.value) / 100;
+    } else {
+      quality = undefined;
+    }
 
-    const outBlob=await picaInstance.toBlob(canvas,mime,quality);
-    return {blob:outBlob,name:`${f.name.replace(/\.[^.]+$/,'')}_${w}x${h}.${mime.split('/')[1]}`};
-  }catch(e){ log(`錯誤：${t.file.name} → ${e}`); return null;}
+    const outBlob = await picaInstance.toBlob(canvas, mime, quality);
+    const ext = (mime.split('/')[1] || 'jpg').replace('+xml','');
+    return { blob: outBlob, name: `${f.name.replace(/\.[^.]+$/,'')}_${w}x${h}.${ext}` };
+  } catch (e) {
+    log(`錯誤：${thumb.file.name} → ${e}`);
+    return null;
+  }
 }
 
-// 執行處理
-document.getElementById('process').addEventListener('click', async()=>{
-  if(queue.length===0){ log('尚未選擇檔案'); return;}
+// process all
+document.getElementById('process').addEventListener('click', async ()=>{
+  if (queue.length === 0){ log('尚未選擇檔案'); return; }
   log(`開始處理 ${queue.length} 個檔案…`);
-  const results=[];
-  for(const t of queue){ const r=await processFile(t); if(r) results.push(r);}
-  if(results.length===1) downloadBlob(results[0].blob,results[0].name);
-  else if(results.length>1){
-    const zip=new JSZip(); results.forEach(r=>zip.file(r.name,r.blob));
-    const content=await zip.generateAsync({type:'blob'}); saveAs(content,'images.zip');
+  const results = [];
+  for (const t of queue){
+    const r = await processFile(t);
+    if (r) results.push(r);
+  }
+  if (results.length === 1) downloadBlob(results[0].blob, results[0].name);
+  else if (results.length > 1){
+    const zip = new JSZip();
+    results.forEach(r => zip.file(r.name, r.blob));
+    const content = await zip.generateAsync({ type:'blob' });
+    saveAs(content, 'images.zip');
     log('全部完成 ✅ (已打包 ZIP)');
   }
 });
 
-function downloadBlob(blob,name){ const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download=name; a.click(); setTimeout(()=>URL.revokeObjectURL(url),2000);}
-document.getElementById('clear').addEventListener('click',()=>{queue.length=0; thumbs.innerHTML=''; thumbList.length=0; log('已清空佇列');});
+// download helper
+function downloadBlob(blob, name){
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = name; a.click();
+  setTimeout(()=>URL.revokeObjectURL(url), 2000);
+}
 
+// clear
+document.getElementById('clear').addEventListener('click', ()=>{
+  queue.length = 0;
+  thumbList.length = 0;
+  thumbs.innerHTML = '';
+  log('已清空佇列');
+});
+
+// Base64 handlers (unchanged)
+document.getElementById('imgToBase64').addEventListener('change', e=>{
+  const f = e.target.files[0]; if(!f) return;
+  const r = new FileReader();
+  r.onload = evt => { document.getElementById('base64Output').value = evt.target.result.split(',')[1]; document.getElementById('previewBase64Img').src = evt.target.result; };
+  r.readAsDataURL(f);
+});
+document.getElementById('downloadBase64Btn').addEventListener('click', ()=>{
+  const blob = new Blob([document.getElementById('base64Output').value], {type:'text/plain'});
+  downloadBlob(blob, 'image_base64.txt');
+});
+document.getElementById('base64File').addEventListener('change', e=>{
+  const f = e.target.files[0]; if(!f) return;
+  const r = new FileReader();
+  document.getElementById('progressContainer').style.display = 'block';
+  r.onload = evt => { document.getElementById('base64Input').value = evt.target.result.trim(); convertBase64ToImage(); };
+  r.readAsText(f);
+});
+function detectFormat(base64){
+  if (base64.startsWith('iVBORw0KGgo')) return 'png';
+  if (base64.startsWith('/9j/')) return 'jpeg';
+  if (base64.startsWith('UklGR')) return 'webp';
+  return 'png';
+}
+function convertBase64ToImage(){
+  let raw = document.getElementById('base64Input').value.trim(); if(!raw) return;
+  let format = 'png', data = raw;
+  if (!raw.startsWith('data:image/')){
+    format = detectFormat(raw);
+    data = `data:image/${format};base64,` + raw;
+  }
+  document.getElementById('restoredImg').onload = ()=>{ document.getElementById('progressContainer').style.display = 'none'; };
+  document.getElementById('restoredImg').src = data;
+  const link = document.getElementById('downloadRestored'); link.href = data; link.download = `restored.${format}`; link.style.display = 'inline-block';
+}
+
+// init UI state
+updateAllThumbs();
+
+// tabs
+document.querySelectorAll('.tab').forEach(tab=>{
+  tab.addEventListener('click', ()=>{
+    document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach(c=>c.classList.remove('active'));
+    tab.classList.add('active');
+    document.getElementById(tab.dataset.tab).classList.add('active');
+  });
+});
 </script>
 </body>
 </html>
