@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Teng Image Tools v1.6</title>
+<title>Teng Image Tools v1.7</title>
 <style>
 body{font-family:Arial;margin:20px;background:#0b1020;color:#e7ecf3}
 h1,h2{text-align:center}
@@ -25,23 +25,6 @@ label{display:block;margin-top:10px;font-size:14px;color:#9aa4b2}
 .range-inline{display:flex;align-items:center;gap:8px}
 .range-inline input[type=range]{flex:1}
 .small-badge{font-size:13px;color:#c7d2fe;background:#0d1330;padding:4px 8px;border-radius:6px;border:1px solid #27314a}
-
-/* 下拉選單藍底白字 */
-select {
-  background:#002366;  
-  color:#fff;          
-  padding:10px;
-  border-radius:6px;
-  border:1px solid #27314a;
-  font-size:16px;
-  width:100%;
-  box-sizing:border-box;
-}
-select:focus {
-  outline:none;
-  background:#0044aa;  
-}
-
 @media(max-width:600px){.thumbs{grid-template-columns:repeat(2,1fr)}body{margin:5px}.card{margin:5px;padding:12px}button,select,input,textarea{width:100%!important;box-sizing:border-box;font-size:16px}}
 </style>
 <script src="https://cdn.jsdelivr.net/npm/pica@8.0.0/dist/pica.min.js"></script>
@@ -50,7 +33,7 @@ select:focus {
 <script src="https://cdn.jsdelivr.net/npm/file-saver/dist/FileSaver.min.js"></script>
 </head>
 <body>
-<h1>Teng Image Tools v1.6</h1>
+<h1>Teng Image Tools v1.7</h1>
 
 <div class="tabs">
   <div class="tab active" data-tab="resizer">尺寸格式調整</div>
@@ -71,8 +54,10 @@ select:focus {
     </label>
 
     <h3>執行</h3>
-    <button id="process">開始處理</button>
-    <button id="clear">清空</button>
+    <div style="display:flex;gap:10px;margin-bottom:10px;">
+      <button id="process" style="flex:1;padding:12px;font-size:16px;">開始處理</button>
+      <button id="clear" style="flex:1;padding:12px;font-size:16px;">清空</button>
+    </div>
 
     <h3>輸出選項</h3>
     <label>輸出格式
@@ -158,7 +143,6 @@ select:focus {
 <script>
 const picaInstance = window.pica({features:['js','wasm','cib']});
 
-// --- DOM ---
 const thumbs = document.getElementById('thumbs');
 const logEl = document.getElementById('log');
 const fileFiles = document.getElementById('fileFiles');
@@ -202,7 +186,7 @@ function toggleCustomInputs(){
 
 function toggleJpegQualityUI(){
   const fmt = formatEl.value;
-  jpegWrap.style.display = (fmt==='image/jpeg')?'block':'none';
+  jpegWrap.style.display = (fmt === 'image/jpeg') ? 'block':'none';
 }
 
 function calcTargetSize(origW, origH){
@@ -210,6 +194,7 @@ function calcTargetSize(origW, origH){
   let targetLong = null, targetShort = null;
   if (s.longSel > 0) targetLong = s.longSel;
   else if (s.longSel === -1 && s.longCustomVal > 0) targetLong = s.longCustomVal;
+
   if (s.shortSel > 0) targetShort = s.shortSel;
   else if (s.shortSel === -1 && s.shortCustomVal > 0) targetShort = s.shortCustomVal;
 
@@ -285,12 +270,7 @@ function updateAllThumbs(){
   jpegQualityLabel.textContent = jpegQualityEl.value + '%';
 
   const s = readSettings();
-  if ( (s.longSel>0 || s.longSel===-1 || s.shortSel>0 || s.shortSel===-1) ){
-    document.getElementById('note').style.display = 'block';
-  } else {
-    document.getElementById('note').style.display = 'none';
-  }
-
+  document.getElementById('note').style.display = (s.longSel>0||s.longSel===-1||s.shortSel>0||s.shortSel===-1)?'block':'none';
   thumbList.forEach(t => updateThumbDisplay(t));
 }
 
@@ -338,44 +318,32 @@ async function processFile(thumb){
     await picaInstance.resize(img, canvas, { quality: 3, alpha: true });
     const fmt = formatEl.value;
     const mime = fmt !== 'keep' ? fmt : (f.type || 'image/jpeg');
-
-    let quality;
-    if (mime.includes('jpeg') || mime.includes('webp')) {
-      quality = Number(jpegQualityEl.value) / 100;
-    } else {
-      quality = undefined;
-    }
-
+    let quality = (mime.includes('jpeg')||mime.includes('webp')) ? Number(jpegQualityEl.value)/100 : undefined;
     const outBlob = await picaInstance.toBlob(canvas, mime, quality);
     const ext = (mime.split('/')[1] || 'jpg').replace('+xml','');
     return { blob: outBlob, name: `${f.name.replace(/\.[^.]+$/,'')}_${w}x${h}.${ext}` };
-  } catch (e) {
-    log(`錯誤：${thumb.file.name} → ${e}`);
-    return null;
-  }
+  } catch (e) { log(`錯誤：${thumb.file.name} → ${e}`); return null; }
 }
 
 document.getElementById('process').addEventListener('click', async ()=>{
   if (queue.length === 0){ log('尚未選擇檔案'); return; }
-  log('開始處理...');
-  const zip = new JSZip();
-  for (const thumb of queue){
-    const res = await processFile(thumb);
-    if (res){
-      zip.file(res.name, res.blob);
-      log(`已處理 ${res.name}`);
-    }
+  log(`開始處理 ${queue.length} 個檔案…`);
+  const results = [];
+  for (const t of queue){ const r = await processFile(t); if(r) results.push(r); }
+  if (results.length === 1) downloadBlob(results[0].blob, results[0].name);
+  else if (results.length > 1){
+    const zip = new JSZip();
+    results.forEach(r => zip.file(r.name, r.blob));
+    const content = await zip.generateAsync({ type:'blob' });
+    saveAs(content, 'images.zip');
   }
-  const blob = await zip.generateAsync({ type: 'blob' });
-  saveAs(blob, 'images.zip');
-  log('全部完成並下載 images.zip');
+  log('處理完成');
 });
 
+function downloadBlob(blob, name){ saveAs(blob, name); }
+
 document.getElementById('clear').addEventListener('click', ()=>{
-  thumbs.innerHTML = '';
-  logEl.innerHTML = '';
-  queue.length = 0;
-  thumbList.length = 0;
+  thumbs.innerHTML=''; logEl.innerHTML=''; queue.length=0; thumbList.length=0;
 });
 
 document.querySelectorAll('.tab').forEach(tab=>{
@@ -387,55 +355,61 @@ document.querySelectorAll('.tab').forEach(tab=>{
   });
 });
 
-// --- Base64 ---
-const imgToBase64El = document.getElementById('imgToBase64');
+// Base64 轉換模組
+const imgToBase64 = document.getElementById('imgToBase64');
 const base64Output = document.getElementById('base64Output');
-const previewBase64Img = document.getElementById('previewBase64Img');
 const downloadBase64Btn = document.getElementById('downloadBase64Btn');
+const previewBase64Img = document.getElementById('previewBase64Img');
 const base64Input = document.getElementById('base64Input');
-const base64File = document.getElementById('base64File');
 const restoredImg = document.getElementById('restoredImg');
 const downloadRestored = document.getElementById('downloadRestored');
-const progressContainer = document.getElementById('progressContainer');
 const progressBar = document.getElementById('progressBar');
+const progressContainer = document.getElementById('progressContainer');
+const base64File = document.getElementById('base64File');
 
-imgToBase64El.addEventListener('change', async e=>{
-  const f = e.target.files[0];
-  if (!f) return;
+imgToBase64.addEventListener('change', e=>{
+  const file = e.target.files[0];
+  if(!file) return;
   const reader = new FileReader();
-  reader.onload = ()=>{ base64Output.value = reader.result.split(',')[1]; previewBase64Img.src = reader.result; };
-  reader.readAsDataURL(f);
+  reader.onload = ()=>{ base64Output.value = reader.result.split(',')[1]; previewBase64Img.src=reader.result; };
+  reader.readAsDataURL(file);
 });
 
 downloadBase64Btn.addEventListener('click', ()=>{
-  const blob = new Blob([base64Output.value], {type:'text/plain;charset=utf-8'});
-  saveAs(blob,'base64.txt');
+  const blob = new Blob([base64Output.value], { type:'text/plain;charset=utf-8' });
+  saveAs(blob,'image_base64.txt');
 });
 
-function loadBase64ToImg(str){
-  progressContainer.style.display='block';
-  progressBar.style.width='0%';
-  const chunk = 50000;
-  let result='';
-  for(let i=0;i<str.length;i+=chunk){
-    result += str.slice(i,i+chunk);
-    progressBar.style.width = Math.min(100, Math.round((i/str.length)*100))+'%';
+base64Input.addEventListener('input', ()=>{
+  const str = base64Input.value;
+  if(!str) return;
+  const imgBlob = b64toBlob(str);
+  const url = URL.createObjectURL(imgBlob);
+  restoredImg.src = url;
+  downloadRestored.href = url;
+  downloadRestored.style.display='inline';
+});
+
+base64File.addEventListener('change', e=>{
+  const file = e.target.files[0]; if(!file) return;
+  const reader = new FileReader();
+  reader.onload = ()=>{ base64Input.value=reader.result; base64Input.dispatchEvent(new Event('input')); };
+  reader.readAsText(file);
+});
+
+function b64toBlob(b64Data, contentType='', sliceSize=512){
+  const byteCharacters = atob(b64Data);
+  const byteArrays = [];
+  for(let offset=0; offset<byteCharacters.length; offset+=sliceSize){
+    const slice = byteCharacters.slice(offset, offset+sliceSize);
+    const byteNumbers = new Array(slice.length);
+    for(let i=0;i<slice.length;i++) byteNumbers[i]=slice.charCodeAt(i);
+    byteArrays.push(new Uint8Array(byteNumbers));
   }
-  const dataURL = 'data:image/png;base64,'+result;
-  restoredImg.src = dataURL;
-  downloadRestored.href = dataURL;
-  downloadRestored.style.display='inline-block';
-  progressContainer.style.display='none';
+  return new Blob(byteArrays,{type:contentType||'image/png'});
 }
 
-base64Input.addEventListener('change', e=>loadBase64ToImg(e.target.value));
-base64File.addEventListener('change', e=>{
-  const f = e.target.files[0];
-  if (!f) return;
-  const reader = new FileReader();
-  reader.onload = ()=>loadBase64ToImg(reader.result);
-  reader.readAsText(f);
-});
+updateAllThumbs();
 </script>
 </body>
 </html>
