@@ -1,198 +1,449 @@
 <!DOCTYPE html>
 <html lang="zh">
 <head>
-  <meta charset="UTF-8">
-  <title>Teng Image Tools v1.5</title>
-  <style>
-    body { font-family: Arial, sans-serif; margin: 20px; }
-    h1 { text-align: center; }
-    .tabs { display: flex; justify-content: center; margin-bottom: 20px; }
-    .tab-btn {
-      flex: 1;
-      padding: 12px;
-      font-size: 16px;
-      cursor: pointer;
-      background: #003366;
-      color: #fff;
-      border: none;
-      margin: 0 2px;
-      border-radius: 6px;
-    }
-    .tab-btn.active { background: #0055aa; }
-    .tab-content { display: none; }
-    .tab-content.active { display: block; }
-    .controls { margin: 15px 0; }
-    label { margin-right: 8px; }
-    input[type="number"] { width: 80px; }
-    .preview-grid {
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 10px;
-    }
-    @media (max-width: 768px) {
-      .preview-grid {
-        grid-template-columns: repeat(2, 1fr);
-      }
-    }
-    .preview-item { text-align: center; }
-    .preview-item img { max-width: 100%; border: 1px solid #ccc; border-radius: 4px; }
-    .big-btn {
-      display: inline-block;
-      background: #007bff;
-      color: #fff;
-      padding: 12px 20px;
-      border-radius: 6px;
-      font-size: 16px;
-      cursor: pointer;
-      margin: 5px 0;
-    }
-    .note { color: red; margin-top: 10px; font-size: 14px; }
-  </style>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Teng Image Tools v1.5</title>
+<style>
+body{font-family:Arial;margin:20px;background:#0b1020;color:#e7ecf3}
+h1,h2{text-align:center}
+.tabs{display:flex;justify-content:center;margin-bottom:20px;gap:10px;flex-wrap:wrap}
+.tab{padding:10px 20px;cursor:pointer;border-radius:6px;background:#002366;color:#fff;font-weight:bold}
+.tab.active{background:#0044aa}
+.tab-content{display:none}
+.tab-content.active{display:block}
+.card{background:#141a2e;border:1px solid #27314a;border-radius:12px;padding:16px;margin:12px auto;max-width:100%}
+.file-btn{display:inline-block;padding:10px 20px;background:#002366;color:#fff;border-radius:6px;cursor:pointer;margin:5px 0;text-align:center}
+.file-btn input[type=file]{display:none}
+.thumbs{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+.thumb{background:#0c1226;border:1px solid #27314a;border-radius:12px;overflow:hidden}
+.thumb img{width:100%;display:block}
+.thumb .meta{padding:8px;font-size:12px;color:#9aa4b2;text-align:center}
+.drop{border:2px dashed #2b3b66;border-radius:10px;padding:18px;text-align:center;color:#c7d2fe;background:#0d1330;margin-bottom:10px}
+.log{font-family:monospace;background:#0a0f22;border:1px solid #27314a;border-radius:8px;padding:10px;height:160px;overflow:auto}
+label{display:block;margin-top:10px;font-size:14px;color:#9aa4b2}
+.range-inline{display:flex;align-items:center;gap:8px}
+.range-inline input[type=range]{flex:1}
+.small-badge{font-size:13px;color:#c7d2fe;background:#0d1330;padding:4px 8px;border-radius:6px;border:1px solid #27314a}
+@media(max-width:600px){.thumbs{grid-template-columns:repeat(2,1fr)}body{margin:5px}.card{margin:5px;padding:12px}button,select,input,textarea{width:100%!important;box-sizing:border-box;font-size:16px}}
+</style>
+<script src="https://cdn.jsdelivr.net/npm/pica@8.0.0/dist/pica.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/heic2any@0.0.4/dist/heic2any.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jszip/dist/jszip.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/file-saver/dist/FileSaver.min.js"></script>
 </head>
 <body>
-  <h1>Teng Image Tools v1.5</h1>
-  <div class="tabs">
-    <button class="tab-btn active" onclick="openTab(event, 'resize')">圖片 ➝ Base64</button>
-    <button class="tab-btn" onclick="openTab(event, 'options')">尺寸格式調整</button>
-  </div>
+<h1>Teng Image Tools v1.5</h1>
 
-  <!-- Tab 1 -->
-  <div id="resize" class="tab-content active">
-    <label class="big-btn">
-      選擇檔案
-      <input type="file" id="fileInput" multiple style="display:none" onchange="handleFiles(this.files)">
+<div class="tabs">
+  <div class="tab active" data-tab="resizer">尺寸格式調整</div>
+  <div class="tab" data-tab="base64">Base64轉換</div>
+</div>
+
+<div id="resizer" class="tab-content active">
+  <section class="card">
+    <h2>圖片尺寸/格式調整器</h2>
+
+    <div class="drop" id="drop">拖曳圖片或資料夾到這裡</div>
+
+    <label class="file-btn">選擇檔案
+      <input id="fileFiles" type="file" accept="image/*,.heic,.heif" multiple>
     </label>
-    <label class="big-btn">
-      選擇資料夾
-      <input type="file" id="folderInput" webkitdirectory directory style="display:none" onchange="handleFiles(this.files)">
+    <label class="file-btn">選擇資料夾
+      <input id="fileFolder" type="file" webkitdirectory>
     </label>
-    <div class="preview-grid" id="preview"></div>
-  </div>
 
-  <!-- Tab 2 -->
-  <div id="options" class="tab-content">
-    <div class="controls">
-      <label>縮放比例(%):
-        <input type="number" id="scaleInput" value="100" min="1" max="500" oninput="updatePreviewSizes()">
-      </label>
-    </div>
-    <div class="controls">
-      <label>長邊:
-        <select id="longSideSelect" onchange="updatePreviewSizes()">
-          <option value="0">原尺寸</option>
-          <option value="512">512</option>
-          <option value="1024">1024</option>
-          <option value="1280">1280</option>
-          <option value="custom">自訂</option>
-        </select>
-        <input type="number" id="longSideCustom" style="display:none" placeholder="輸入長邊" oninput="updatePreviewSizes()">
-      </label>
-    </div>
-    <div class="controls">
-      <label>短邊:
-        <select id="shortSideSelect" onchange="updatePreviewSizes()">
-          <option value="0">原尺寸</option>
-          <option value="512">512</option>
-          <option value="1024">1024</option>
-          <option value="1280">1280</option>
-          <option value="custom">自訂</option>
-        </select>
-        <input type="number" id="shortSideCustom" style="display:none" placeholder="輸入短邊" oninput="updatePreviewSizes()">
-      </label>
-    </div>
-    <div class="controls">
-      <label>JPG 品質:
-        <input type="number" id="jpgQuality" value="100" min="1" max="100"> %
-      </label>
-    </div>
-    <div class="note" id="noteMsg">注意：已設定長/短邊，縮放比例將忽略</div>
-  </div>
+    <h3>執行</h3>
+    <button id="process">開始處理</button>
+    <button id="clear">清空</button>
 
-  <script>
-    let filesData = [];
+    <h3>輸出選項</h3>
+    <label>輸出格式
+      <select id="format">
+        <option value="keep">維持原格式</option>
+        <option value="image/jpeg" selected>JPEG</option>
+        <option value="image/png">PNG</option>
+        <option value="image/webp">WebP</option>
+      </select>
+    </label>
 
-    function openTab(evt, tabName) {
-      document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
-      evt.currentTarget.classList.add('active');
-      document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
-      document.getElementById(tabName).classList.add('active');
+    <label>長邊
+      <select id="longSide">
+        <option value="0" selected>原尺寸</option>
+        <option value="512">512</option>
+        <option value="1024">1024</option>
+        <option value="1280">1280</option>
+        <option value="-1">自訂</option>
+      </select>
+      <input id="longSideCustom" type="number" placeholder="自訂長邊" style="display:none;margin-top:5px;">
+    </label>
+
+    <label>短邊
+      <select id="shortSide">
+        <option value="0" selected>原尺寸</option>
+        <option value="512">512</option>
+        <option value="1024">1024</option>
+        <option value="1280">1280</option>
+        <option value="-1">自訂</option>
+      </select>
+      <input id="shortSideCustom" type="number" placeholder="自訂短邊" style="display:none;margin-top:5px;">
+    </label>
+
+    <label><input id="lock" type="checkbox" checked> 維持長寬比</label>
+
+    <!-- 縮放比例 (range) -->
+    <label>縮放比例 (%)</label>
+    <div class="range-inline">
+      <input id="scale" type="range" min="10" max="200" value="100">
+      <div class="small-badge" id="scaleLabel">100%</div>
+    </div>
+
+    <!-- JPG 品質：僅在格式為 JPEG 顯示 (range style 與縮放比一樣) -->
+    <div id="jpegQualityWrap" style="margin-top:10px; display:block;">
+      <label>JPG 品質 (%)</label>
+      <div class="range-inline">
+        <input id="jpegQuality" type="range" min="1" max="100" value="90">
+        <div class="small-badge" id="jpegQualityLabel">90%</div>
+      </div>
+    </div>
+
+    <div id="note" style="color:#ff7777;margin-top:5px;">注意：已設定長/短邊，縮放比例將忽略</div>
+
+    <h3>預覽</h3>
+    <div id="thumbs" class="thumbs"></div>
+
+    <h3>日誌</h3>
+    <div id="log" class="log"></div>
+  </section>
+</div>
+
+<div id="base64" class="tab-content">
+  <section class="card">
+    <h2>圖片 → Base64</h2>
+    <label class="file-btn">選擇檔案
+      <input id="imgToBase64" type="file" accept="image/*">
+    </label>
+    <button id="downloadBase64Btn">下載 Base64 txt</button>
+    <textarea id="base64Output" placeholder="這裡會顯示 Base64 編碼"></textarea>
+    <img id="previewBase64Img" class="preview">
+    <hr>
+    <h2>Base64 → 圖片</h2>
+    <textarea id="base64Input" placeholder="貼上 Base64 字串（或直接選檔）"></textarea>
+    <label class="file-btn">選擇檔案
+      <input id="base64File" type="file" accept=".txt">
+    </label>
+    <div id="progressContainer" style="width:100%;background:#ddd;height:10px;display:none;margin:10px 0;">
+      <div id="progressBar" style="width:0%;height:100%;background:#4caf50;text-align:center;color:white;font-size:12px">0%</div>
+    </div>
+    <a id="downloadRestored" style="display:none" download="restored.png">下載圖片</a>
+    <img id="restoredImg" class="preview">
+  </section>
+</div>
+
+<script>
+const picaInstance = window.pica({features:['js','wasm','cib']});
+
+// --- DOM ---
+const thumbs = document.getElementById('thumbs');
+const logEl = document.getElementById('log');
+const fileFiles = document.getElementById('fileFiles');
+const fileFolder = document.getElementById('fileFolder');
+const drop = document.getElementById('drop');
+
+const longSideSel = document.getElementById('longSide');
+const shortSideSel = document.getElementById('shortSide');
+const longSideCustom = document.getElementById('longSideCustom');
+const shortSideCustom = document.getElementById('shortSideCustom');
+const lockEl = document.getElementById('lock');
+const scaleEl = document.getElementById('scale');
+const scaleLabel = document.getElementById('scaleLabel');
+const formatEl = document.getElementById('format');
+
+const jpegWrap = document.getElementById('jpegQualityWrap');
+const jpegQualityEl = document.getElementById('jpegQuality');
+const jpegQualityLabel = document.getElementById('jpegQualityLabel');
+
+function log(msg){ const time=new Date().toLocaleTimeString(); logEl.innerHTML += `[${time}] ${msg}<br>`; logEl.scrollTop=logEl.scrollHeight; }
+
+// data
+const queue = [];
+const thumbList = [];
+
+// helper: read settings
+function readSettings(){
+  const longSel = Number(longSideSel.value);
+  const shortSel = Number(shortSideSel.value);
+  const longCustomVal = Number(longSideCustom.value);
+  const shortCustomVal = Number(shortSideCustom.value);
+  const scale = Number(scaleEl.value)/100;
+  const lock = lockEl.checked;
+  const outFormat = formatEl.value;
+  const jpegQuality = Number(jpegQualityEl.value)/100; // 0..1
+  return { longSel, shortSel, longCustomVal, shortCustomVal, scale, lock, outFormat, jpegQuality };
+}
+
+// show/hide custom inputs
+function toggleCustomInputs(){
+  longSideCustom.style.display = Number(longSideSel.value) === -1 ? 'block' : 'none';
+  shortSideCustom.style.display = Number(shortSideSel.value) === -1 ? 'block' : 'none';
+}
+
+// show/hide jpeg quality control depending on format
+function toggleJpegQualityUI(){
+  const fmt = formatEl.value;
+  if(fmt === 'image/jpeg'){
+    jpegWrap.style.display = 'block';
+  } else {
+    jpegWrap.style.display = 'none';
+  }
+}
+
+// calculate target size robustly
+function calcTargetSize(origW, origH){
+  const s = readSettings();
+  let targetLong = null, targetShort = null;
+  if (s.longSel > 0) targetLong = s.longSel;
+  else if (s.longSel === -1 && s.longCustomVal > 0) targetLong = s.longCustomVal;
+
+  if (s.shortSel > 0) targetShort = s.shortSel;
+  else if (s.shortSel === -1 && s.shortCustomVal > 0) targetShort = s.shortCustomVal;
+
+  const isLandscape = origW >= origH;
+  const origLong = isLandscape ? origW : origH;
+  const origShort = isLandscape ? origH : origW;
+  const aspect = origLong / origShort;
+
+  // If neither specified -> use scale
+  if (!targetLong && !targetShort){
+    const w = Math.max(1, Math.round(origW * s.scale));
+    const h = Math.max(1, Math.round(origH * s.scale));
+    return { w, h };
+  }
+
+  // If lock (preserve aspect)
+  if (s.lock){
+    if (targetLong && !targetShort){
+      const newLong = targetLong;
+      const newShort = Math.max(1, Math.round(newLong / aspect));
+      return isLandscape ? { w: newLong, h: newShort } : { w: newShort, h: newLong };
     }
-
-    function handleFiles(fileList) {
-      for (let file of fileList) {
-        if (!file.type.startsWith('image/')) continue;
-        const reader = new FileReader();
-        reader.onload = e => {
-          const img = new Image();
-          img.onload = () => {
-            filesData.push({
-              file,
-              src: e.target.result,
-              width: img.width,
-              height: img.height
-            });
-            renderPreview();
-          };
-          img.src = e.target.result;
-        };
-        reader.readAsDataURL(file);
-      }
+    if (!targetLong && targetShort){
+      const newShort = targetShort;
+      const newLong = Math.max(1, Math.round(newShort * aspect));
+      return isLandscape ? { w: newLong, h: newShort } : { w: newShort, h: newLong };
     }
-
-    function renderPreview() {
-      const preview = document.getElementById('preview');
-      preview.innerHTML = '';
-      filesData.forEach((data, index) => {
-        const dims = calculateNewSize(data.width, data.height);
-        const div = document.createElement('div');
-        div.className = 'preview-item';
-        div.innerHTML = `
-          <img src="${data.src}">
-          <div>${data.width}×${data.height} → ${dims.width}×${dims.height}</div>
-        `;
-        preview.appendChild(div);
-      });
-    }
-
-    function calculateNewSize(w, h) {
-      let scale = parseInt(document.getElementById('scaleInput').value) / 100;
-      let longSideVal = document.getElementById('longSideSelect').value;
-      let shortSideVal = document.getElementById('shortSideSelect').value;
-      let lw = w, lh = h;
-
-      // 自訂輸入
-      if (longSideVal === 'custom') longSideVal = parseInt(document.getElementById('longSideCustom').value) || 0;
-      else longSideVal = parseInt(longSideVal);
-
-      if (shortSideVal === 'custom') shortSideVal = parseInt(document.getElementById('shortSideCustom').value) || 0;
-      else shortSideVal = parseInt(shortSideVal);
-
-      if (longSideVal > 0 || shortSideVal > 0) {
-        document.getElementById('noteMsg').style.display = 'block';
-        const isLandscape = w >= h;
-        if (longSideVal > 0) {
-          if (isLandscape) { lw = longSideVal; lh = Math.round(h * (longSideVal / w)); }
-          else { lh = longSideVal; lw = Math.round(w * (longSideVal / h)); }
-        }
-        if (shortSideVal > 0) {
-          if (isLandscape) { lh = shortSideVal; lw = Math.round(w * (shortSideVal / h)); }
-          else { lw = shortSideVal; lh = Math.round(h * (shortSideVal / w)); }
-        }
+    if (targetLong && targetShort){
+      const shortFromLong = Math.max(1, Math.round(targetLong / aspect));
+      if (shortFromLong <= targetShort){
+        return isLandscape ? { w: targetLong, h: shortFromLong } : { w: shortFromLong, h: targetLong };
       } else {
-        document.getElementById('noteMsg').style.display = 'none';
-        lw = Math.round(w * scale);
-        lh = Math.round(h * scale);
+        const longFromShort = Math.max(1, Math.round(targetShort * aspect));
+        return isLandscape ? { w: longFromShort, h: targetShort } : { w: targetShort, h: longFromShort };
       }
-      return { width: lw, height: lh };
+    }
+  } else {
+    const useLong = targetLong || origLong;
+    const useShort = targetShort || origShort;
+    return isLandscape ? { w: useLong, h: useShort } : { w: useShort, h: useLong };
+  }
+
+  return { w: origW, h: origH };
+}
+
+// add preview thumbnail
+function addThumbEntry(thumb){
+  const div = document.createElement('div');
+  div.className = 'thumb';
+  const imgEl = new Image();
+  imgEl.src = thumb.url;
+  div.appendChild(imgEl);
+  const meta = document.createElement('div');
+  meta.className = 'meta';
+  meta.textContent = `${thumb.origW}×${thumb.origH} → ${thumb.origW}×${thumb.origH}`;
+  div.appendChild(meta);
+  thumbs.appendChild(div);
+
+  thumb.div = div;
+  thumb.imgEl = imgEl;
+  thumb.meta = meta;
+  thumbList.push(thumb);
+}
+
+// update single thumb display
+function updateThumbDisplay(thumb){
+  const { w, h } = calcTargetSize(thumb.origW, thumb.origH);
+  thumb.meta.textContent = `${thumb.origW}×${thumb.origH} → ${w}×${h}`;
+  thumb.currentW = w;
+  thumb.currentH = h;
+}
+
+// update all thumbs
+function updateAllThumbs(){
+  toggleCustomInputs();
+  toggleJpegQualityUI();
+  scaleLabel.textContent = scaleEl.value + '%';
+  jpegQualityLabel.textContent = jpegQualityEl.value + '%';
+
+  const s = readSettings();
+  if ( (s.longSel>0 || s.longSel===-1 || s.shortSel>0 || s.shortSel===-1) ){
+    document.getElementById('note').style.display = 'block';
+  } else {
+    document.getElementById('note').style.display = 'none';
+  }
+
+  thumbList.forEach(t => updateThumbDisplay(t));
+}
+
+// handle files
+async function handleFiles(list){
+  for (const file of list){
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => {
+      const thumb = { file, url, origW: img.naturalWidth, origH: img.naturalHeight };
+      queue.push(thumb);
+      addThumbEntry(thumb);
+      updateThumbDisplay(thumb); // immediately apply current settings
+    };
+    img.src = url;
+  }
+  log(`加入 ${list.length} 個檔案`);
+}
+
+// drag & drop
+drop.addEventListener('dragover', e=>{ e.preventDefault(); drop.classList.add('dragover'); });
+drop.addEventListener('dragleave', e=>{ e.preventDefault(); drop.classList.remove('dragover'); });
+drop.addEventListener('drop', e=>{ e.preventDefault(); drop.classList.remove('dragover'); handleFiles([...e.dataTransfer.files]); });
+
+// file selectors
+fileFiles.addEventListener('change', e=> handleFiles([...e.target.files]));
+fileFolder.addEventListener('change', e=> handleFiles([...e.target.files]));
+
+// wire inputs to updateAllThumbs
+['longSide','shortSide','longSideCustom','shortSideCustom','scale','lock','format','jpegQuality'].forEach(id=>{
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.addEventListener('input', updateAllThumbs);
+  el.addEventListener('change', updateAllThumbs);
+});
+
+// processing single file (pica)
+async function processFile(thumb){
+  try {
+    let f = thumb.file;
+    if (f.name.toLowerCase().endsWith('.heic') || f.name.toLowerCase().endsWith('.heif')){
+      const blob = await heic2any({ blob: f, toType: 'image/png' });
+      f = new File([blob], f.name.replace(/\.(heic|heif)$/i, '.png'), { type: 'image/png' });
+    }
+    const img = await new Promise(res=>{
+      const i = new Image(); i.onload = ()=>res(i); i.src = URL.createObjectURL(f);
+    });
+    const { w, h } = calcTargetSize(img.naturalWidth, img.naturalHeight);
+    const canvas = document.createElement('canvas'); canvas.width = w; canvas.height = h;
+    await picaInstance.resize(img, canvas, { quality: 3, alpha: true });
+    const fmt = formatEl.value;
+    const mime = fmt !== 'keep' ? fmt : (f.type || 'image/jpeg');
+
+    // quality: for jpeg & webp use jpegQualityEl (0..1); for others undefined
+    let quality;
+    if (mime.includes('jpeg') || mime.includes('webp')) {
+      quality = Number(jpegQualityEl.value) / 100;
+    } else {
+      quality = undefined;
     }
 
-    function updatePreviewSizes() {
-      renderPreview();
-      document.getElementById('longSideCustom').style.display = 
-        document.getElementById('longSideSelect').value === 'custom' ? 'inline-block' : 'none';
-      document.getElementById('shortSideCustom').style.display = 
-        document.getElementById('shortSideSelect').value === 'custom' ? 'inline-block' : 'none';
-    }
-  </script>
+    const outBlob = await picaInstance.toBlob(canvas, mime, quality);
+    const ext = (mime.split('/')[1] || 'jpg').replace('+xml','');
+    return { blob: outBlob, name: `${f.name.replace(/\.[^.]+$/,'')}_${w}x${h}.${ext}` };
+  } catch (e) {
+    log(`錯誤：${thumb.file.name} → ${e}`);
+    return null;
+  }
+}
+
+// process all
+document.getElementById('process').addEventListener('click', async ()=>{
+  if (queue.length === 0){ log('尚未選擇檔案'); return; }
+  log(`開始處理 ${queue.length} 個檔案…`);
+  const results = [];
+  for (const t of queue){
+    const r = await processFile(t);
+    if (r) results.push(r);
+  }
+  if (results.length === 1) downloadBlob(results[0].blob, results[0].name);
+  else if (results.length > 1){
+    const zip = new JSZip();
+    results.forEach(r => zip.file(r.name, r.blob));
+    const content = await zip.generateAsync({ type:'blob' });
+    saveAs(content, 'images.zip');
+    log('全部完成 ✅ (已打包 ZIP)');
+  }
+});
+
+// download helper
+function downloadBlob(blob, name){
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = name; a.click();
+  setTimeout(()=>URL.revokeObjectURL(url), 2000);
+}
+
+// clear
+document.getElementById('clear').addEventListener('click', ()=>{
+  queue.length = 0;
+  thumbList.length = 0;
+  thumbs.innerHTML = '';
+  log('已清空佇列');
+});
+
+// Base64 handlers (unchanged)
+document.getElementById('imgToBase64').addEventListener('change', e=>{
+  const f = e.target.files[0]; if(!f) return;
+  const r = new FileReader();
+  r.onload = evt => { document.getElementById('base64Output').value = evt.target.result.split(',')[1]; document.getElementById('previewBase64Img').src = evt.target.result; };
+  r.readAsDataURL(f);
+});
+document.getElementById('downloadBase64Btn').addEventListener('click', ()=>{
+  const blob = new Blob([document.getElementById('base64Output').value], {type:'text/plain'});
+  downloadBlob(blob, 'image_base64.txt');
+});
+document.getElementById('base64File').addEventListener('change', e=>{
+  const f = e.target.files[0]; if(!f) return;
+  const r = new FileReader();
+  document.getElementById('progressContainer').style.display = 'block';
+  r.onload = evt => { document.getElementById('base64Input').value = evt.target.result.trim(); convertBase64ToImage(); };
+  r.readAsText(f);
+});
+function detectFormat(base64){
+  if (base64.startsWith('iVBORw0KGgo')) return 'png';
+  if (base64.startsWith('/9j/')) return 'jpeg';
+  if (base64.startsWith('UklGR')) return 'webp';
+  return 'png';
+}
+function convertBase64ToImage(){
+  let raw = document.getElementById('base64Input').value.trim(); if(!raw) return;
+  let format = 'png', data = raw;
+  if (!raw.startsWith('data:image/')){
+    format = detectFormat(raw);
+    data = `data:image/${format};base64,` + raw;
+  }
+  document.getElementById('restoredImg').onload = ()=>{ document.getElementById('progressContainer').style.display = 'none'; };
+  document.getElementById('restoredImg').src = data;
+  const link = document.getElementById('downloadRestored'); link.href = data; link.download = `restored.${format}`; link.style.display = 'inline-block';
+}
+
+// init UI state
+updateAllThumbs();
+
+// tabs
+document.querySelectorAll('.tab').forEach(tab=>{
+  tab.addEventListener('click', ()=>{
+    document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach(c=>c.classList.remove('active'));
+    tab.classList.add('active');
+    document.getElementById(tab.dataset.tab).classList.add('active');
+  });
+});
+</script>
 </body>
 </html>
