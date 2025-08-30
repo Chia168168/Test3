@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Teng Image Tools v1.3</title>
+<title>Teng Image Tools v1.4</title>
 <style>
 body { font-family: Arial, sans-serif; margin: 20px; background:#0b1020; color:#e7ecf3; }
 h1, h2 { text-align: center; }
@@ -44,7 +44,7 @@ label{display:block;margin-top:10px;font-size:14px;color:#9aa4b2}
 <script src="https://cdn.jsdelivr.net/npm/file-saver/dist/FileSaver.min.js"></script>
 </head>
 <body>
-<h1>Teng Image Tools v1.3</h1>
+<h1>Teng Image Tools v1.4</h1>
 
 <div class="tabs">
   <div class="tab active" data-tab="resizer">尺寸格式調整</div>
@@ -158,23 +158,11 @@ const thumbs = document.getElementById("thumbs");
 const queue = [];
 const thumbList = [];
 
-// 顯示/隱藏自訂欄
-['longSide','shortSide'].forEach(id=>{
-  const sel = document.getElementById(id);
-  const custom = document.getElementById(id+'Custom');
-  sel.addEventListener('change', e=>{
-    custom.style.display = sel.value==-1?'block':'none';
-    updateThumbs();
-  });
-  custom.addEventListener('input', updateThumbs);
+// 顯示/隱藏自訂欄 & 即時更新縮圖
+['longSide','shortSide','longSideCustom','shortSideCustom','scale','lock'].forEach(id=>{
+  document.getElementById(id).addEventListener('input', updateThumbs);
+  document.getElementById(id).addEventListener('change', updateThumbs);
 });
-
-// 縮放比例顯示
-document.getElementById('scale').addEventListener('input', updateThumbs);
-document.getElementById('scale').addEventListener('input', e=>{
-  document.getElementById('scaleLabel').textContent = e.target.value + '%';
-});
-document.getElementById('lock').addEventListener('change', updateThumbs);
 
 // 拖放/選檔
 const drop=document.getElementById('drop');
@@ -192,7 +180,7 @@ async function handleFiles(list){
       const thumb = {file, url, origW: img.naturalWidth, origH: img.naturalHeight, w: img.naturalWidth, h: img.naturalHeight};
       queue.push(thumb);
       addThumb(thumb);
-      updateThumbs(); // 新增即時套用當前尺寸設定
+      updateThumbs(); // 新增檔案立即套用當前尺寸
     };
     img.src = url;
   }
@@ -221,19 +209,20 @@ function calcTargetSize(origW,origH){
   const scale=Number(document.getElementById('scale').value)/100;
   const lock=document.getElementById('lock').checked;
 
-  let useResize=false;
   if(longSel>0 || longSel==-1 || shortSel>0 || shortSel==-1){
-    useResize=true;
     let targetLong = longSel>0 ? longSel : (longSel==-1 && longCustom>0 ? longCustom: origW);
     let targetShort = shortSel>0 ? shortSel : (shortSel==-1 && shortCustom>0 ? shortCustom: origH);
 
     if(origW>=origH){
-      w=targetLong; h=lock?Math.round(origH*(w/origW)):targetShort;
-    } else{
-      h=targetLong; w=lock?Math.round(origW*(h/origH)):targetShort;
+      w=targetLong;
+      h=lock ? Math.round(origH*(w/origW)) : targetShort;
+    } else {
+      h=targetLong;
+      w=lock ? Math.round(origW*(h/origH)) : targetShort;
     }
-  } else{
-    w = Math.round(origW*scale); h=Math.round(origH*scale);
+  } else {
+    w = Math.round(origW*scale);
+    h = Math.round(origH*scale);
   }
   return {w,h};
 }
