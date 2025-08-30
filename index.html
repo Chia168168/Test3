@@ -186,7 +186,7 @@ function toggleCustomInputs(){
 
 function toggleJpegQualityUI(){
   const fmt = formatEl.value;
-  jpegWrap.style.display = (fmt === 'image/jpeg') ? 'block':'none';
+  jpegWrap.style.display = (fmt === 'image/jpeg') ? 'block' : 'none';
 }
 
 function calcTargetSize(origW, origH){
@@ -225,7 +225,7 @@ function calcTargetSize(origW, origH){
       if (shortFromLong <= targetShort){
         return isLandscape ? { w: targetLong, h: shortFromLong } : { w: shortFromLong, h: targetLong };
       } else {
-        const longFromShort = Math.max(1, Math.round(targetShort * aspect));
+        const longFromShort = Math.max(1, Math.round(targetShort / aspect));
         return isLandscape ? { w: longFromShort, h: targetShort } : { w: targetShort, h: longFromShort };
       }
     }
@@ -270,7 +270,8 @@ function updateAllThumbs(){
   jpegQualityLabel.textContent = jpegQualityEl.value + '%';
 
   const s = readSettings();
-  document.getElementById('note').style.display = (s.longSel>0||s.longSel===-1||s.shortSel>0||s.shortSel===-1)?'block':'none';
+  document.getElementById('note').style.display = (s.longSel>0 || s.longSel===-1 || s.shortSel>0 || s.shortSel===-1) ? 'block' : 'none';
+
   thumbList.forEach(t => updateThumbDisplay(t));
 }
 
@@ -318,97 +319,107 @@ async function processFile(thumb){
     await picaInstance.resize(img, canvas, { quality: 3, alpha: true });
     const fmt = formatEl.value;
     const mime = fmt !== 'keep' ? fmt : (f.type || 'image/jpeg');
-    let quality = (mime.includes('jpeg')||mime.includes('webp')) ? Number(jpegQualityEl.value)/100 : undefined;
+    let quality;
+    if (mime.includes('jpeg') || mime.includes('webp')) {
+      quality = Number(jpegQualityEl.value) / 100;
+    } else {
+      quality = undefined;
+    }
     const outBlob = await picaInstance.toBlob(canvas, mime, quality);
     const ext = (mime.split('/')[1] || 'jpg').replace('+xml','');
     return { blob: outBlob, name: `${f.name.replace(/\.[^.]+$/,'')}_${w}x${h}.${ext}` };
-  } catch (e) { log(`錯誤：${thumb.file.name} → ${e}`); return null; }
+  } catch (e) {
+    log(`錯誤：${thumb.file.name} → ${e}`);
+    return null;
+  }
 }
 
 document.getElementById('process').addEventListener('click', async ()=>{
   if (queue.length === 0){ log('尚未選擇檔案'); return; }
   log(`開始處理 ${queue.length} 個檔案…`);
   const results = [];
-  for (const t of queue){ const r = await processFile(t); if(r) results.push(r); }
+  for (const t of queue){
+    const r = await processFile(t);
+    if (r) results.push(r);
+  }
   if (results.length === 1) downloadBlob(results[0].blob, results[0].name);
   else if (results.length > 1){
     const zip = new JSZip();
     results.forEach(r => zip.file(r.name, r.blob));
-    const content = await zip.generateAsync({ type:'blob' });
-    saveAs(content, 'images.zip');
+    const content = await zip.generateAsync({ type:"blob" });
+    saveAs(content, "TengImages.zip");
   }
   log('處理完成');
 });
 
-function downloadBlob(blob, name){ saveAs(blob, name); }
-
 document.getElementById('clear').addEventListener('click', ()=>{
-  thumbs.innerHTML=''; logEl.innerHTML=''; queue.length=0; thumbList.length=0;
+  queue.length = 0; thumbList.length = 0;
+  thumbs.innerHTML=''; logEl.innerHTML=''; fileFiles.value=''; fileFolder.value='';
 });
 
-document.querySelectorAll('.tab').forEach(tab=>{
-  tab.addEventListener('click', e=>{
-    document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
-    tab.classList.add('active');
-    document.querySelectorAll('.tab-content').forEach(c=>c.classList.remove('active'));
-    document.getElementById(tab.dataset.tab).classList.add('active');
+function downloadBlob(blob, filename){ saveAs(blob, filename); }
+
+// Tab 切換
+document.querySelectorAll('.tab').forEach(t=>{
+  t.addEventListener('click', ()=>{ 
+    document.querySelectorAll('.tab').forEach(a=>a.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach(a=>a.classList.remove('active'));
+    t.classList.add('active'); document.getElementById(t.dataset.tab).classList.add('active');
   });
 });
 
-// Base64 轉換模組
+// Base64功能
 const imgToBase64 = document.getElementById('imgToBase64');
 const base64Output = document.getElementById('base64Output');
-const downloadBase64Btn = document.getElementById('downloadBase64Btn');
 const previewBase64Img = document.getElementById('previewBase64Img');
+const downloadBase64Btn = document.getElementById('downloadBase64Btn');
 const base64Input = document.getElementById('base64Input');
-const restoredImg = document.getElementById('restoredImg');
-const downloadRestored = document.getElementById('downloadRestored');
-const progressBar = document.getElementById('progressBar');
-const progressContainer = document.getElementById('progressContainer');
 const base64File = document.getElementById('base64File');
+const progressContainer = document.getElementById('progressContainer');
+const progressBar = document.getElementById('progressBar');
+const downloadRestored = document.getElementById('downloadRestored');
+const restoredImg = document.getElementById('restoredImg');
 
-imgToBase64.addEventListener('change', e=>{
-  const file = e.target.files[0];
-  if(!file) return;
+imgToBase64?.addEventListener('change', e=>{
+  const f = e.target.files[0]; if(!f) return;
   const reader = new FileReader();
-  reader.onload = ()=>{ base64Output.value = reader.result.split(',')[1]; previewBase64Img.src=reader.result; };
-  reader.readAsDataURL(file);
+  reader.onload = ()=>{
+    const dataURL = reader.result;
+    base64Output.value = dataURL.split(',')[1];
+    previewBase64Img.src = dataURL;
+  };
+  reader.readAsDataURL(f);
 });
 
-downloadBase64Btn.addEventListener('click', ()=>{
-  const blob = new Blob([base64Output.value], { type:'text/plain;charset=utf-8' });
-  saveAs(blob,'image_base64.txt');
+downloadBase64Btn?.addEventListener('click', ()=>{
+  if(!base64Output.value) return;
+  const blob = new Blob([base64Output.value],{type:'text/plain'});
+  saveAs(blob,'base64.txt');
 });
 
-base64Input.addEventListener('input', ()=>{
-  const str = base64Input.value;
-  if(!str) return;
-  const imgBlob = b64toBlob(str);
-  const url = URL.createObjectURL(imgBlob);
-  restoredImg.src = url;
-  downloadRestored.href = url;
-  downloadRestored.style.display='inline';
-});
-
-base64File.addEventListener('change', e=>{
-  const file = e.target.files[0]; if(!file) return;
-  const reader = new FileReader();
-  reader.onload = ()=>{ base64Input.value=reader.result; base64Input.dispatchEvent(new Event('input')); };
-  reader.readAsText(file);
-});
-
-function b64toBlob(b64Data, contentType='', sliceSize=512){
-  const byteCharacters = atob(b64Data);
-  const byteArrays = [];
-  for(let offset=0; offset<byteCharacters.length; offset+=sliceSize){
-    const slice = byteCharacters.slice(offset, offset+sliceSize);
-    const byteNumbers = new Array(slice.length);
-    for(let i=0;i<slice.length;i++) byteNumbers[i]=slice.charCodeAt(i);
-    byteArrays.push(new Uint8Array(byteNumbers));
-  }
-  return new Blob(byteArrays,{type:contentType||'image/png'});
+function restoreBase64(data){
+  return new Promise(res=>{
+    const img = new Image();
+    img.onload = ()=>res(img);
+    img.src = 'data:image/png;base64,' + data;
+  });
 }
 
+base64Input?.addEventListener('input', async ()=>{
+  if(!base64Input.value) return;
+  restoredImg.src = 'data:image/png;base64,' + base64Input.value;
+  downloadRestored.style.display='inline-block';
+  downloadRestored.href=restoredImg.src;
+});
+
+base64File?.addEventListener('change', e=>{
+  const f = e.target.files[0]; if(!f) return;
+  const reader = new FileReader();
+  reader.onload = ()=>{ base64Input.value = reader.result; restoredImg.src='data:image/png;base64,'+reader.result; downloadRestored.style.display='inline-block'; downloadRestored.href=restoredImg.src; };
+  reader.readAsText(f);
+});
+
+// 初始設定
 updateAllThumbs();
 </script>
 </body>
