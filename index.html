@@ -25,9 +25,9 @@ label{display:block;margin-top:10px;font-size:14px;color:#9aa4b2}
 .range-inline{display:flex;align-items:center;gap:8px}
 .range-inline input[type=range]{flex:1}
 .small-badge{font-size:13px;color:#c7d2fe;background:#0d1330;padding:4px 8px;border-radius:6px;border:1px solid #27314a}
-.button-group{display:flex;gap:10px;margin-top:10px}
-.button-group button{flex:1;padding:12px;font-size:16px;cursor:pointer;border-radius:6px;background:#002366;color:#fff;border:none}
-select{background:#141a2e;color:#fff;border-radius:6px;padding:8px;border:1px solid #27314a;font-size:16px}
+select{background:#0b1020;color:#e7ecf3;border:1px solid #002366;padding:8px;border-radius:6px;font-size:16px;width:100%}
+button.action-btn{padding:12px 20px;font-size:16px;margin-right:10px;cursor:pointer;border-radius:6px;border:none;color:#fff;background:#002366;flex:1}
+.action-wrapper{display:flex;gap:10px;margin-top:10px;margin-bottom:10px}
 @media(max-width:600px){.thumbs{grid-template-columns:repeat(2,1fr)}body{margin:5px}.card{margin:5px;padding:12px}button,select,input,textarea{width:100%!important;box-sizing:border-box;font-size:16px}}
 </style>
 <script src="https://cdn.jsdelivr.net/npm/pica@8.0.0/dist/pica.min.js"></script>
@@ -56,9 +56,9 @@ select{background:#141a2e;color:#fff;border-radius:6px;padding:8px;border:1px so
       <input id="fileFolder" type="file" webkitdirectory>
     </label>
 
-    <div class="button-group">
-      <button id="process">開始處理</button>
-      <button id="clear">清空</button>
+    <div class="action-wrapper">
+      <button id="process" class="action-btn">開始處理</button>
+      <button id="clear" class="action-btn">清空</button>
     </div>
 
     <h3>輸出選項</h3>
@@ -145,6 +145,7 @@ select{background:#141a2e;color:#fff;border-radius:6px;padding:8px;border:1px so
 <script>
 const picaInstance = window.pica({features:['js','wasm','cib']});
 
+// --- DOM ---
 const thumbs = document.getElementById('thumbs');
 const logEl = document.getElementById('log');
 const fileFiles = document.getElementById('fileFiles');
@@ -166,9 +167,11 @@ const jpegQualityLabel = document.getElementById('jpegQualityLabel');
 
 function log(msg){ const time=new Date().toLocaleTimeString(); logEl.innerHTML += `[${time}] ${msg}<br>`; logEl.scrollTop=logEl.scrollHeight; }
 
+// data
 const queue = [];
 const thumbList = [];
 
+// helper: read settings
 function readSettings(){
   const longSel = Number(longSideSel.value);
   const shortSel = Number(shortSideSel.value);
@@ -177,24 +180,33 @@ function readSettings(){
   const scale = Number(scaleEl.value)/100;
   const lock = lockEl.checked;
   const outFormat = formatEl.value;
-  const jpegQuality = Number(jpegQualityEl.value)/100;
+  const jpegQuality = Number(jpegQualityEl.value)/100; // 0..1
   return { longSel, shortSel, longCustomVal, shortCustomVal, scale, lock, outFormat, jpegQuality };
 }
 
+// show/hide custom inputs
 function toggleCustomInputs(){
   longSideCustom.style.display = Number(longSideSel.value) === -1 ? 'block' : 'none';
   shortSideCustom.style.display = Number(shortSideSel.value) === -1 ? 'block' : 'none';
 }
 
+// show/hide jpeg quality control depending on format
 function toggleJpegQualityUI(){
-  jpegWrap.style.display = formatEl.value === 'image/jpeg' ? 'block' : 'none';
+  const fmt = formatEl.value;
+  if(fmt === 'image/jpeg'){
+    jpegWrap.style.display = 'block';
+  } else {
+    jpegWrap.style.display = 'none';
+  }
 }
 
+// calculate target size robustly
 function calcTargetSize(origW, origH){
   const s = readSettings();
   let targetLong = null, targetShort = null;
   if (s.longSel > 0) targetLong = s.longSel;
   else if (s.longSel === -1 && s.longCustomVal > 0) targetLong = s.longCustomVal;
+
   if (s.shortSel > 0) targetShort = s.shortSel;
   else if (s.shortSel === -1 && s.shortCustomVal > 0) targetShort = s.shortCustomVal;
 
@@ -234,9 +246,11 @@ function calcTargetSize(origW, origH){
     const useShort = targetShort || origShort;
     return isLandscape ? { w: useLong, h: useShort } : { w: useShort, h: useLong };
   }
+
   return { w: origW, h: origH };
 }
 
+// add preview thumbnail
 function addThumbEntry(thumb){
   const div = document.createElement('div');
   div.className = 'thumb';
@@ -245,7 +259,7 @@ function addThumbEntry(thumb){
   div.appendChild(imgEl);
   const meta = document.createElement('div');
   meta.className = 'meta';
-.meta.textContent = `${thumb.origW}×${thumb.origH} → ${thumb.origW}×${thumb.origH}`;
+  meta.textContent = `${thumb.origW}×${thumb.origH} → ${thumb.origW}×${thumb.origH}`;
   div.appendChild(meta);
   thumbs.appendChild(div);
 
@@ -255,6 +269,7 @@ function addThumbEntry(thumb){
   thumbList.push(thumb);
 }
 
+// update single thumb display
 function updateThumbDisplay(thumb){
   const { w, h } = calcTargetSize(thumb.origW, thumb.origH);
   thumb.meta.textContent = `${thumb.origW}×${thumb.origH} → ${w}×${h}`;
@@ -262,6 +277,7 @@ function updateThumbDisplay(thumb){
   thumb.currentH = h;
 }
 
+// update all thumbs
 function updateAllThumbs(){
   toggleCustomInputs();
   toggleJpegQualityUI();
@@ -278,6 +294,7 @@ function updateAllThumbs(){
   thumbList.forEach(t => updateThumbDisplay(t));
 }
 
+// handle files
 async function handleFiles(list){
   for (const file of list){
     const url = URL.createObjectURL(file);
@@ -286,20 +303,23 @@ async function handleFiles(list){
       const thumb = { file, url, origW: img.naturalWidth, origH: img.naturalHeight };
       queue.push(thumb);
       addThumbEntry(thumb);
-      updateThumbDisplay(thumb);
+      updateThumbDisplay(thumb); // immediately apply current settings
     };
     img.src = url;
   }
   log(`加入 ${list.length} 個檔案`);
 }
 
+// drag & drop
 drop.addEventListener('dragover', e=>{ e.preventDefault(); drop.classList.add('dragover'); });
 drop.addEventListener('dragleave', e=>{ e.preventDefault(); drop.classList.remove('dragover'); });
 drop.addEventListener('drop', e=>{ e.preventDefault(); drop.classList.remove('dragover'); handleFiles([...e.dataTransfer.files]); });
 
+// file selectors
 fileFiles.addEventListener('change', e=> handleFiles([...e.target.files]));
 fileFolder.addEventListener('change', e=> handleFiles([...e.target.files]));
 
+// wire inputs to updateAllThumbs
 ['longSide','shortSide','longSideCustom','shortSideCustom','scale','lock','format','jpegQuality'].forEach(id=>{
   const el = document.getElementById(id);
   if (!el) return;
@@ -307,6 +327,7 @@ fileFolder.addEventListener('change', e=> handleFiles([...e.target.files]));
   el.addEventListener('change', updateAllThumbs);
 });
 
+// processing single file (pica)
 async function processFile(thumb){
   try {
     let f = thumb.file;
@@ -322,16 +343,24 @@ async function processFile(thumb){
     await picaInstance.resize(img, canvas, { quality: 3, alpha: true });
     const fmt = formatEl.value;
     const mime = fmt !== 'keep' ? fmt : (f.type || 'image/jpeg');
+
     let quality;
     if (mime.includes('jpeg') || mime.includes('webp')) {
       quality = Number(jpegQualityEl.value) / 100;
-    } else { quality = undefined; }
+    } else {
+      quality = undefined;
+    }
+
     const outBlob = await picaInstance.toBlob(canvas, mime, quality);
     const ext = (mime.split('/')[1] || 'jpg').replace('+xml','');
     return { blob: outBlob, name: `${f.name.replace(/\.[^.]+$/,'')}_${w}x${h}.${ext}` };
-  } catch (e) { log(`錯誤：${thumb.file.name} → ${e}`); return null; }
+  } catch (e) {
+    log(`錯誤：${thumb.file.name} → ${e}`);
+    return null;
+  }
 }
 
+// process all
 document.getElementById('process').addEventListener('click', async ()=>{
   if (queue.length === 0){ log('尚未選擇檔案'); return; }
   log(`開始處理 ${queue.length} 個檔案…`);
@@ -350,6 +379,7 @@ document.getElementById('process').addEventListener('click', async ()=>{
   }
 });
 
+// download helper
 function downloadBlob(blob, name){
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
@@ -357,6 +387,7 @@ function downloadBlob(blob, name){
   setTimeout(()=>URL.revokeObjectURL(url), 2000);
 }
 
+// clear
 document.getElementById('clear').addEventListener('click', ()=>{
   queue.length = 0;
   thumbList.length = 0;
@@ -364,7 +395,7 @@ document.getElementById('clear').addEventListener('click', ()=>{
   log('已清空佇列');
 });
 
-// Base64 handlers
+// Base64 handlers (unchanged)
 document.getElementById('imgToBase64').addEventListener('change', e=>{
   const f = e.target.files[0]; if(!f) return;
   const r = new FileReader();
@@ -400,16 +431,21 @@ function convertBase64ToImage(){
   const link = document.getElementById('downloadRestored'); link.href = data; link.download = `restored.${format}`; link.style.display = 'inline-block';
 }
 
+// init UI state
 updateAllThumbs();
 
-document.querySelectorAll('.tab').forEach(tab=>{
-  tab.addEventListener('click', ()=>{
-    document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
-    document.querySelectorAll('.tab-content').forEach(c=>c.classList.remove('active'));
-    tab.classList.add('active');
-    document.getElementById(tab.dataset.tab).classList.add('active');
+// tabs (修正 Base64 分頁切換)
+window.addEventListener('DOMContentLoaded', () => {
+  document.querySelectorAll('.tab').forEach(tab=>{
+    tab.addEventListener('click', ()=>{
+      document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+      document.querySelectorAll('.tab-content').forEach(c=>c.classList.remove('active'));
+      tab.classList.add('active');
+      const target = document.getElementById(tab.dataset.tab);
+      if(target) target.classList.add('active');
+    });
   });
 });
 </script>
 </body>
-</html>  
+</html>
