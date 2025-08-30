@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Teng Image Tools v1.5</title>
+<title>Teng Image Tools v1.6</title>
 <style>
 body{font-family:Arial;margin:20px;background:#0b1020;color:#e7ecf3}
 h1,h2{text-align:center}
@@ -25,6 +25,23 @@ label{display:block;margin-top:10px;font-size:14px;color:#9aa4b2}
 .range-inline{display:flex;align-items:center;gap:8px}
 .range-inline input[type=range]{flex:1}
 .small-badge{font-size:13px;color:#c7d2fe;background:#0d1330;padding:4px 8px;border-radius:6px;border:1px solid #27314a}
+
+/* 下拉選單藍底白字 */
+select {
+  background:#002366;  
+  color:#fff;          
+  padding:10px;
+  border-radius:6px;
+  border:1px solid #27314a;
+  font-size:16px;
+  width:100%;
+  box-sizing:border-box;
+}
+select:focus {
+  outline:none;
+  background:#0044aa;  
+}
+
 @media(max-width:600px){.thumbs{grid-template-columns:repeat(2,1fr)}body{margin:5px}.card{margin:5px;padding:12px}button,select,input,textarea{width:100%!important;box-sizing:border-box;font-size:16px}}
 </style>
 <script src="https://cdn.jsdelivr.net/npm/pica@8.0.0/dist/pica.min.js"></script>
@@ -33,7 +50,7 @@ label{display:block;margin-top:10px;font-size:14px;color:#9aa4b2}
 <script src="https://cdn.jsdelivr.net/npm/file-saver/dist/FileSaver.min.js"></script>
 </head>
 <body>
-<h1>Teng Image Tools v1.5</h1>
+<h1>Teng Image Tools v1.6</h1>
 
 <div class="tabs">
   <div class="tab active" data-tab="resizer">尺寸格式調整</div>
@@ -91,14 +108,12 @@ label{display:block;margin-top:10px;font-size:14px;color:#9aa4b2}
 
     <label><input id="lock" type="checkbox" checked> 維持長寬比</label>
 
-    <!-- 縮放比例 (range) -->
     <label>縮放比例 (%)</label>
     <div class="range-inline">
       <input id="scale" type="range" min="10" max="200" value="100">
       <div class="small-badge" id="scaleLabel">100%</div>
     </div>
 
-    <!-- JPG 品質：僅在格式為 JPEG 顯示 (range style 與縮放比一樣) -->
     <div id="jpegQualityWrap" style="margin-top:10px; display:block;">
       <label>JPG 品質 (%)</label>
       <div class="range-inline">
@@ -165,11 +180,9 @@ const jpegQualityLabel = document.getElementById('jpegQualityLabel');
 
 function log(msg){ const time=new Date().toLocaleTimeString(); logEl.innerHTML += `[${time}] ${msg}<br>`; logEl.scrollTop=logEl.scrollHeight; }
 
-// data
 const queue = [];
 const thumbList = [];
 
-// helper: read settings
 function readSettings(){
   const longSel = Number(longSideSel.value);
   const shortSel = Number(shortSideSel.value);
@@ -178,33 +191,25 @@ function readSettings(){
   const scale = Number(scaleEl.value)/100;
   const lock = lockEl.checked;
   const outFormat = formatEl.value;
-  const jpegQuality = Number(jpegQualityEl.value)/100; // 0..1
+  const jpegQuality = Number(jpegQualityEl.value)/100;
   return { longSel, shortSel, longCustomVal, shortCustomVal, scale, lock, outFormat, jpegQuality };
 }
 
-// show/hide custom inputs
 function toggleCustomInputs(){
   longSideCustom.style.display = Number(longSideSel.value) === -1 ? 'block' : 'none';
   shortSideCustom.style.display = Number(shortSideSel.value) === -1 ? 'block' : 'none';
 }
 
-// show/hide jpeg quality control depending on format
 function toggleJpegQualityUI(){
   const fmt = formatEl.value;
-  if(fmt === 'image/jpeg'){
-    jpegWrap.style.display = 'block';
-  } else {
-    jpegWrap.style.display = 'none';
-  }
+  jpegWrap.style.display = (fmt==='image/jpeg')?'block':'none';
 }
 
-// calculate target size robustly
 function calcTargetSize(origW, origH){
   const s = readSettings();
   let targetLong = null, targetShort = null;
   if (s.longSel > 0) targetLong = s.longSel;
   else if (s.longSel === -1 && s.longCustomVal > 0) targetLong = s.longCustomVal;
-
   if (s.shortSel > 0) targetShort = s.shortSel;
   else if (s.shortSel === -1 && s.shortCustomVal > 0) targetShort = s.shortCustomVal;
 
@@ -213,14 +218,12 @@ function calcTargetSize(origW, origH){
   const origShort = isLandscape ? origH : origW;
   const aspect = origLong / origShort;
 
-  // If neither specified -> use scale
   if (!targetLong && !targetShort){
     const w = Math.max(1, Math.round(origW * s.scale));
     const h = Math.max(1, Math.round(origH * s.scale));
     return { w, h };
   }
 
-  // If lock (preserve aspect)
   if (s.lock){
     if (targetLong && !targetShort){
       const newLong = targetLong;
@@ -250,7 +253,6 @@ function calcTargetSize(origW, origH){
   return { w: origW, h: origH };
 }
 
-// add preview thumbnail
 function addThumbEntry(thumb){
   const div = document.createElement('div');
   div.className = 'thumb';
@@ -269,7 +271,6 @@ function addThumbEntry(thumb){
   thumbList.push(thumb);
 }
 
-// update single thumb display
 function updateThumbDisplay(thumb){
   const { w, h } = calcTargetSize(thumb.origW, thumb.origH);
   thumb.meta.textContent = `${thumb.origW}×${thumb.origH} → ${w}×${h}`;
@@ -277,7 +278,6 @@ function updateThumbDisplay(thumb){
   thumb.currentH = h;
 }
 
-// update all thumbs
 function updateAllThumbs(){
   toggleCustomInputs();
   toggleJpegQualityUI();
@@ -294,7 +294,6 @@ function updateAllThumbs(){
   thumbList.forEach(t => updateThumbDisplay(t));
 }
 
-// handle files
 async function handleFiles(list){
   for (const file of list){
     const url = URL.createObjectURL(file);
@@ -303,23 +302,20 @@ async function handleFiles(list){
       const thumb = { file, url, origW: img.naturalWidth, origH: img.naturalHeight };
       queue.push(thumb);
       addThumbEntry(thumb);
-      updateThumbDisplay(thumb); // immediately apply current settings
+      updateThumbDisplay(thumb);
     };
     img.src = url;
   }
   log(`加入 ${list.length} 個檔案`);
 }
 
-// drag & drop
 drop.addEventListener('dragover', e=>{ e.preventDefault(); drop.classList.add('dragover'); });
 drop.addEventListener('dragleave', e=>{ e.preventDefault(); drop.classList.remove('dragover'); });
 drop.addEventListener('drop', e=>{ e.preventDefault(); drop.classList.remove('dragover'); handleFiles([...e.dataTransfer.files]); });
 
-// file selectors
 fileFiles.addEventListener('change', e=> handleFiles([...e.target.files]));
 fileFolder.addEventListener('change', e=> handleFiles([...e.target.files]));
 
-// wire inputs to updateAllThumbs
 ['longSide','shortSide','longSideCustom','shortSideCustom','scale','lock','format','jpegQuality'].forEach(id=>{
   const el = document.getElementById(id);
   if (!el) return;
@@ -327,7 +323,6 @@ fileFolder.addEventListener('change', e=> handleFiles([...e.target.files]));
   el.addEventListener('change', updateAllThumbs);
 });
 
-// processing single file (pica)
 async function processFile(thumb){
   try {
     let f = thumb.file;
@@ -344,7 +339,6 @@ async function processFile(thumb){
     const fmt = formatEl.value;
     const mime = fmt !== 'keep' ? fmt : (f.type || 'image/jpeg');
 
-    // quality: for jpeg & webp use jpegQualityEl (0..1); for others undefined
     let quality;
     if (mime.includes('jpeg') || mime.includes('webp')) {
       quality = Number(jpegQualityEl.value) / 100;
@@ -361,88 +355,86 @@ async function processFile(thumb){
   }
 }
 
-// process all
 document.getElementById('process').addEventListener('click', async ()=>{
   if (queue.length === 0){ log('尚未選擇檔案'); return; }
-  log(`開始處理 ${queue.length} 個檔案…`);
-  const results = [];
-  for (const t of queue){
-    const r = await processFile(t);
-    if (r) results.push(r);
+  log('開始處理...');
+  const zip = new JSZip();
+  for (const thumb of queue){
+    const res = await processFile(thumb);
+    if (res){
+      zip.file(res.name, res.blob);
+      log(`已處理 ${res.name}`);
+    }
   }
-  if (results.length === 1) downloadBlob(results[0].blob, results[0].name);
-  else if (results.length > 1){
-    const zip = new JSZip();
-    results.forEach(r => zip.file(r.name, r.blob));
-    const content = await zip.generateAsync({ type:'blob' });
-    saveAs(content, 'images.zip');
-    log('全部完成 ✅ (已打包 ZIP)');
-  }
+  const blob = await zip.generateAsync({ type: 'blob' });
+  saveAs(blob, 'images.zip');
+  log('全部完成並下載 images.zip');
 });
 
-// download helper
-function downloadBlob(blob, name){
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url; a.download = name; a.click();
-  setTimeout(()=>URL.revokeObjectURL(url), 2000);
-}
-
-// clear
 document.getElementById('clear').addEventListener('click', ()=>{
+  thumbs.innerHTML = '';
+  logEl.innerHTML = '';
   queue.length = 0;
   thumbList.length = 0;
-  thumbs.innerHTML = '';
-  log('已清空佇列');
 });
 
-// Base64 handlers (unchanged)
-document.getElementById('imgToBase64').addEventListener('change', e=>{
-  const f = e.target.files[0]; if(!f) return;
-  const r = new FileReader();
-  r.onload = evt => { document.getElementById('base64Output').value = evt.target.result.split(',')[1]; document.getElementById('previewBase64Img').src = evt.target.result; };
-  r.readAsDataURL(f);
-});
-document.getElementById('downloadBase64Btn').addEventListener('click', ()=>{
-  const blob = new Blob([document.getElementById('base64Output').value], {type:'text/plain'});
-  downloadBlob(blob, 'image_base64.txt');
-});
-document.getElementById('base64File').addEventListener('change', e=>{
-  const f = e.target.files[0]; if(!f) return;
-  const r = new FileReader();
-  document.getElementById('progressContainer').style.display = 'block';
-  r.onload = evt => { document.getElementById('base64Input').value = evt.target.result.trim(); convertBase64ToImage(); };
-  r.readAsText(f);
-});
-function detectFormat(base64){
-  if (base64.startsWith('iVBORw0KGgo')) return 'png';
-  if (base64.startsWith('/9j/')) return 'jpeg';
-  if (base64.startsWith('UklGR')) return 'webp';
-  return 'png';
-}
-function convertBase64ToImage(){
-  let raw = document.getElementById('base64Input').value.trim(); if(!raw) return;
-  let format = 'png', data = raw;
-  if (!raw.startsWith('data:image/')){
-    format = detectFormat(raw);
-    data = `data:image/${format};base64,` + raw;
-  }
-  document.getElementById('restoredImg').onload = ()=>{ document.getElementById('progressContainer').style.display = 'none'; };
-  document.getElementById('restoredImg').src = data;
-  const link = document.getElementById('downloadRestored'); link.href = data; link.download = `restored.${format}`; link.style.display = 'inline-block';
-}
-
-// init UI state
-updateAllThumbs();
-
-// tabs
 document.querySelectorAll('.tab').forEach(tab=>{
-  tab.addEventListener('click', ()=>{
+  tab.addEventListener('click', e=>{
     document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
-    document.querySelectorAll('.tab-content').forEach(c=>c.classList.remove('active'));
     tab.classList.add('active');
+    document.querySelectorAll('.tab-content').forEach(c=>c.classList.remove('active'));
     document.getElementById(tab.dataset.tab).classList.add('active');
   });
+});
+
+// --- Base64 ---
+const imgToBase64El = document.getElementById('imgToBase64');
+const base64Output = document.getElementById('base64Output');
+const previewBase64Img = document.getElementById('previewBase64Img');
+const downloadBase64Btn = document.getElementById('downloadBase64Btn');
+const base64Input = document.getElementById('base64Input');
+const base64File = document.getElementById('base64File');
+const restoredImg = document.getElementById('restoredImg');
+const downloadRestored = document.getElementById('downloadRestored');
+const progressContainer = document.getElementById('progressContainer');
+const progressBar = document.getElementById('progressBar');
+
+imgToBase64El.addEventListener('change', async e=>{
+  const f = e.target.files[0];
+  if (!f) return;
+  const reader = new FileReader();
+  reader.onload = ()=>{ base64Output.value = reader.result.split(',')[1]; previewBase64Img.src = reader.result; };
+  reader.readAsDataURL(f);
+});
+
+downloadBase64Btn.addEventListener('click', ()=>{
+  const blob = new Blob([base64Output.value], {type:'text/plain;charset=utf-8'});
+  saveAs(blob,'base64.txt');
+});
+
+function loadBase64ToImg(str){
+  progressContainer.style.display='block';
+  progressBar.style.width='0%';
+  const chunk = 50000;
+  let result='';
+  for(let i=0;i<str.length;i+=chunk){
+    result += str.slice(i,i+chunk);
+    progressBar.style.width = Math.min(100, Math.round((i/str.length)*100))+'%';
+  }
+  const dataURL = 'data:image/png;base64,'+result;
+  restoredImg.src = dataURL;
+  downloadRestored.href = dataURL;
+  downloadRestored.style.display='inline-block';
+  progressContainer.style.display='none';
+}
+
+base64Input.addEventListener('change', e=>loadBase64ToImg(e.target.value));
+base64File.addEventListener('change', e=>{
+  const f = e.target.files[0];
+  if (!f) return;
+  const reader = new FileReader();
+  reader.onload = ()=>loadBase64ToImg(reader.result);
+  reader.readAsText(f);
 });
 </script>
 </body>
