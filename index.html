@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Teng Image Tools v1.8</title>
+<title>Teng Image Tools v1.9</title>
 <style>
 body{font-family:Arial;margin:20px;background:#0b1020;color:#e7ecf3}
 h1,h2{text-align:center}
@@ -27,7 +27,7 @@ label{display:block;margin-top:10px;font-size:14px;color:#9aa4b2}
 .small-badge{font-size:13px;color:#c7d2fe;background:#0d1330;padding:4px 8px;border-radius:6px;border:1px solid #27314a}
 .button-group{display:flex;gap:10px;margin-top:10px}
 .button-group button{flex:1;padding:12px;font-size:16px;cursor:pointer;border-radius:6px;background:#002366;color:#fff;border:none}
-select{background:#002366;color:#fff;border-radius:6px;padding:8px;border:none;font-size:16px}
+select{background:#141a2e;color:#fff;border-radius:6px;padding:8px;border:1px solid #27314a;font-size:16px}
 @media(max-width:600px){.thumbs{grid-template-columns:repeat(2,1fr)}body{margin:5px}.card{margin:5px;padding:12px}button,select,input,textarea{width:100%!important;box-sizing:border-box;font-size:16px}}
 </style>
 <script src="https://cdn.jsdelivr.net/npm/pica@8.0.0/dist/pica.min.js"></script>
@@ -36,7 +36,7 @@ select{background:#002366;color:#fff;border-radius:6px;padding:8px;border:none;f
 <script src="https://cdn.jsdelivr.net/npm/file-saver/dist/FileSaver.min.js"></script>
 </head>
 <body>
-<h1>Teng Image Tools v1.8</h1>
+<h1>Teng Image Tools v1.9</h1>
 
 <div class="tabs">
   <div class="tab active" data-tab="resizer">尺寸格式調整</div>
@@ -145,7 +145,6 @@ select{background:#002366;color:#fff;border-radius:6px;padding:8px;border:none;f
 <script>
 const picaInstance = window.pica({features:['js','wasm','cib']});
 
-// DOM
 const thumbs = document.getElementById('thumbs');
 const logEl = document.getElementById('log');
 const fileFiles = document.getElementById('fileFiles');
@@ -160,11 +159,13 @@ const lockEl = document.getElementById('lock');
 const scaleEl = document.getElementById('scale');
 const scaleLabel = document.getElementById('scaleLabel');
 const formatEl = document.getElementById('format');
+
 const jpegWrap = document.getElementById('jpegQualityWrap');
 const jpegQualityEl = document.getElementById('jpegQuality');
 const jpegQualityLabel = document.getElementById('jpegQualityLabel');
 
 function log(msg){ const time=new Date().toLocaleTimeString(); logEl.innerHTML += `[${time}] ${msg}<br>`; logEl.scrollTop=logEl.scrollHeight; }
+
 const queue = [];
 const thumbList = [];
 
@@ -186,8 +187,7 @@ function toggleCustomInputs(){
 }
 
 function toggleJpegQualityUI(){
-  const fmt = formatEl.value;
-  jpegWrap.style.display = (fmt === 'image/jpeg') ? 'block' : 'none';
+  jpegWrap.style.display = formatEl.value === 'image/jpeg' ? 'block' : 'none';
 }
 
 function calcTargetSize(origW, origH){
@@ -197,15 +197,18 @@ function calcTargetSize(origW, origH){
   else if (s.longSel === -1 && s.longCustomVal > 0) targetLong = s.longCustomVal;
   if (s.shortSel > 0) targetShort = s.shortSel;
   else if (s.shortSel === -1 && s.shortCustomVal > 0) targetShort = s.shortCustomVal;
+
   const isLandscape = origW >= origH;
   const origLong = isLandscape ? origW : origH;
   const origShort = isLandscape ? origH : origW;
   const aspect = origLong / origShort;
+
   if (!targetLong && !targetShort){
     const w = Math.max(1, Math.round(origW * s.scale));
     const h = Math.max(1, Math.round(origH * s.scale));
     return { w, h };
   }
+
   if (s.lock){
     if (targetLong && !targetShort){
       const newLong = targetLong;
@@ -242,9 +245,10 @@ function addThumbEntry(thumb){
   div.appendChild(imgEl);
   const meta = document.createElement('div');
   meta.className = 'meta';
-  meta.textContent = `${thumb.origW}×${thumb.origH} → ${thumb.origW}×${thumb.origH}`;
+.meta.textContent = `${thumb.origW}×${thumb.origH} → ${thumb.origW}×${thumb.origH}`;
   div.appendChild(meta);
   thumbs.appendChild(div);
+
   thumb.div = div;
   thumb.imgEl = imgEl;
   thumb.meta = meta;
@@ -263,8 +267,14 @@ function updateAllThumbs(){
   toggleJpegQualityUI();
   scaleLabel.textContent = scaleEl.value + '%';
   jpegQualityLabel.textContent = jpegQualityEl.value + '%';
+
   const s = readSettings();
-  document.getElementById('note').style.display = (s.longSel>0||s.longSel===-1||s.shortSel>0||s.shortSel===-1) ? 'block' : 'none';
+  if ( (s.longSel>0 || s.longSel===-1 || s.shortSel>0 || s.shortSel===-1) ){
+    document.getElementById('note').style.display = 'block';
+  } else {
+    document.getElementById('note').style.display = 'none';
+  }
+
   thumbList.forEach(t => updateThumbDisplay(t));
 }
 
@@ -286,8 +296,10 @@ async function handleFiles(list){
 drop.addEventListener('dragover', e=>{ e.preventDefault(); drop.classList.add('dragover'); });
 drop.addEventListener('dragleave', e=>{ e.preventDefault(); drop.classList.remove('dragover'); });
 drop.addEventListener('drop', e=>{ e.preventDefault(); drop.classList.remove('dragover'); handleFiles([...e.dataTransfer.files]); });
+
 fileFiles.addEventListener('change', e=> handleFiles([...e.target.files]));
 fileFolder.addEventListener('change', e=> handleFiles([...e.target.files]));
+
 ['longSide','shortSide','longSideCustom','shortSideCustom','scale','lock','format','jpegQuality'].forEach(id=>{
   const el = document.getElementById(id);
   if (!el) return;
@@ -310,7 +322,10 @@ async function processFile(thumb){
     await picaInstance.resize(img, canvas, { quality: 3, alpha: true });
     const fmt = formatEl.value;
     const mime = fmt !== 'keep' ? fmt : (f.type || 'image/jpeg');
-    let quality = (mime.includes('jpeg') || mime.includes('webp')) ? Number(jpegQualityEl.value)/100 : undefined;
+    let quality;
+    if (mime.includes('jpeg') || mime.includes('webp')) {
+      quality = Number(jpegQualityEl.value) / 100;
+    } else { quality = undefined; }
     const outBlob = await picaInstance.toBlob(canvas, mime, quality);
     const ext = (mime.split('/')[1] || 'jpg').replace('+xml','');
     return { blob: outBlob, name: `${f.name.replace(/\.[^.]+$/,'')}_${w}x${h}.${ext}` };
@@ -353,10 +368,7 @@ document.getElementById('clear').addEventListener('click', ()=>{
 document.getElementById('imgToBase64').addEventListener('change', e=>{
   const f = e.target.files[0]; if(!f) return;
   const r = new FileReader();
-  r.onload = evt => { 
-    document.getElementById('base64Output').value = evt.target.result.split(',')[1]; 
-    document.getElementById('previewBase64Img').src = evt.target.result; 
-  };
+  r.onload = evt => { document.getElementById('base64Output').value = evt.target.result.split(',')[1]; document.getElementById('previewBase64Img').src = evt.target.result; };
   r.readAsDataURL(f);
 });
 document.getElementById('downloadBase64Btn').addEventListener('click', ()=>{
@@ -367,20 +379,15 @@ document.getElementById('base64File').addEventListener('change', e=>{
   const f = e.target.files[0]; if(!f) return;
   const r = new FileReader();
   document.getElementById('progressContainer').style.display = 'block';
-  r.onload = evt => { 
-    document.getElementById('base64Input').value = evt.target.result.trim(); 
-    convertBase64ToImage(); 
-  };
+  r.onload = evt => { document.getElementById('base64Input').value = evt.target.result.trim(); convertBase64ToImage(); };
   r.readAsText(f);
 });
-
 function detectFormat(base64){
   if (base64.startsWith('iVBORw0KGgo')) return 'png';
   if (base64.startsWith('/9j/')) return 'jpeg';
   if (base64.startsWith('UklGR')) return 'webp';
   return 'png';
 }
-
 function convertBase64ToImage(){
   let raw = document.getElementById('base64Input').value.trim(); if(!raw) return;
   let format = 'png', data = raw;
@@ -405,4 +412,4 @@ document.querySelectorAll('.tab').forEach(tab=>{
 });
 </script>
 </body>
-</html>
+</html>  
