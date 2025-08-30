@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Teng Image Tools v1.1</title>
+<title>Teng Image Tools v1.2</title>
 <style>
 body { font-family: Arial, sans-serif; margin: 20px; background:#0b1020; color:#e7ecf3; }
 h1, h2 { text-align: center; }
@@ -44,7 +44,7 @@ label{display:block;margin-top:10px;font-size:14px;color:#9aa4b2}
 <script src="https://cdn.jsdelivr.net/npm/file-saver/dist/FileSaver.min.js"></script>
 </head>
 <body>
-<h1>Teng Image Tools v1.1</h1>
+<h1>Teng Image Tools v1.2</h1>
 
 <div class="tabs">
   <div class="tab active" data-tab="resizer">尺寸格式調整</div>
@@ -158,21 +158,12 @@ const thumbs = document.getElementById("thumbs");
 const queue = [];
 const thumbList = [];
 
-// 顯示/隱藏自訂欄 + 監聽輸入
-['longSide','shortSide'].forEach(id=>{
-  const sel = document.getElementById(id);
-  const custom = document.getElementById(id+'Custom');
-  sel.addEventListener('change', ()=>{
-    custom.style.display = sel.value==-1?'block':'none';
-    updateThumbs();
-  });
-  custom.addEventListener('input', updateThumbs);
+// 顯示/隱藏自訂欄 & 即時更新
+['longSide','shortSide','longSideCustom','shortSideCustom','scale','lock'].forEach(id=>{
+  const el=document.getElementById(id);
+  if(el) el.addEventListener('input', updateThumbs);
+  if(el) el.addEventListener('change', updateThumbs);
 });
-
-// 縮放比例顯示
-document.getElementById('scale').addEventListener('input', updateThumbs);
-document.getElementById('scale').addEventListener('input', e=>{document.getElementById('scaleLabel').textContent = e.target.value + '%';});
-document.getElementById('lock').addEventListener('change', updateThumbs);
 
 // 拖放/選檔
 const drop=document.getElementById('drop');
@@ -190,6 +181,7 @@ async function handleFiles(list){
       const thumb = {file, url, origW: img.naturalWidth, origH: img.naturalHeight, w: img.naturalWidth, h: img.naturalHeight};
       queue.push(thumb);
       addThumb(thumb);
+      updateThumb(thumb); // 新增即時更新
     };
     img.src = url;
   }
@@ -206,7 +198,6 @@ function addThumb(thumb){
   thumb.div = div; thumb.meta = meta; thumb.imgEl = imgEl;
   thumbs.appendChild(div);
   thumbList.push(thumb);
-  updateThumb(thumb); // 加入時即套用尺寸
 }
 
 // 計算目標尺寸
@@ -219,20 +210,18 @@ function calcTargetSize(origW,origH){
   const scale=Number(document.getElementById('scale').value)/100;
   const lock=document.getElementById('lock').checked;
 
-  let useResize=false;
   if(longSel>0 || longSel==-1 || shortSel>0 || shortSel==-1){
-    useResize=true;
     let targetLong = longSel>0 ? longSel : (longSel==-1 && longCustom>0 ? longCustom: origW);
     let targetShort = shortSel>0 ? shortSel : (shortSel==-1 && shortCustom>0 ? shortCustom: origH);
 
     if(origW>=origH){
       w=targetLong;
-      h=targetShort;
       if(lock) h=Math.round(origH*(w/origW));
+      else h=targetShort;
     }else{
       h=targetLong;
-      w=targetShort;
       if(lock) w=Math.round(origW*(h/origH));
+      else w=targetShort;
     }
   } else{
     w = Math.round(origW*scale); h=Math.round(origH*scale);
@@ -240,16 +229,16 @@ function calcTargetSize(origW,origH){
   return {w,h};
 }
 
-// 更新單一縮圖
-function updateThumb(thumb){
-  const {w,h}=calcTargetSize(thumb.origW,thumb.origH);
-  thumb.w=w; thumb.h=h;
-  thumb.meta.textContent = `${thumb.origW}×${thumb.origH} → ${thumb.w}×${thumb.h}`;
+// 更新單個縮圖
+function updateThumb(t){
+  const {w,h} = calcTargetSize(t.origW,t.origH);
+  t.w=w; t.h=h;
+  t.meta.textContent = `${t.origW}×${t.origH} → ${t.w}×${t.h}`;
 }
 
 // 更新所有縮圖
 function updateThumbs(){
-  thumbList.forEach(updateThumb);
+  thumbList.forEach(t=>updateThumb(t));
 }
 
 // 處理圖片
@@ -290,6 +279,7 @@ document.getElementById('process').addEventListener('click', async()=>{
 
 function downloadBlob(blob,name){ const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download=name; a.click(); setTimeout(()=>URL.revokeObjectURL(url),2000);}
 document.getElementById('clear').addEventListener('click',()=>{queue.length=0; thumbs.innerHTML=''; thumbList.length=0; log('已清空佇列');});
+
 </script>
 </body>
 </html>
